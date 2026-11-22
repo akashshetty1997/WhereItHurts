@@ -8,7 +8,8 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { PAIN_STYLES } from '@/lib/visitDisplay'
 import { cn } from '@/lib/utils'
 
-// Shown in the stage's bottom-right corner (clear of the body) when a region is tapped during intake.
+// Shown in the stage's bottom-left corner (clear of the body and of View Controls, bottom-right)
+// when a region is tapped during intake.
 // Voice marks pain through Record Your Prep (src/panels/PrepListen.jsx); these controls are for
 // choosing or correcting by hand.
 export default function IntakePicker({ region, entry, listening, onClose }) {
@@ -28,7 +29,7 @@ export default function IntakePicker({ region, entry, listening, onClose }) {
 
   return (
     <div
-      className="absolute right-4 bottom-4 w-80 space-y-4 rounded-2xl bg-card/95 p-4 shadow-2xl ring-1 ring-foreground/10 backdrop-blur animate-in fade-in slide-in-from-bottom-2"
+      className="absolute left-4 bottom-4 w-80 space-y-4 rounded-2xl bg-card/95 p-4 shadow-2xl ring-1 ring-foreground/10 backdrop-blur animate-in fade-in slide-in-from-bottom-2"
       onPointerDown={(e) => e.stopPropagation()}
     >
       <div className="flex items-start justify-between gap-2">
