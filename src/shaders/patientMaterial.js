@@ -28,6 +28,10 @@ const uniforms = {
   uGlowLevel: { value: new Array(N).fill(0) },
   uRingColor: { value: Array.from({ length: N }, () => new THREE.Color(1, 1, 1)) },
   uRingLevel: { value: new Array(N).fill(0) },
+  // Pain-path pulse: a point of light (head + two trailing samples) in body space.
+  uPulse: { value: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] },
+  uPulseColor: { value: new THREE.Color(1, 1, 1) },
+  uPulseLevel: { value: 0 },
 }
 
 const index = Object.fromEntries(SHAPE_ORDER.map((id, i) => [id, i]))
@@ -62,6 +66,12 @@ export const patientUniforms = {
     if (color) uniforms.uRingColor.value[i].set(color)
     uniforms.uRingLevel.value[i] = level
   },
+  // points: head, then two trailing positions (body space); level 0 hides the pulse.
+  setPulse(points, color, level) {
+    points.forEach((p, i) => uniforms.uPulse.value[i].copy(p))
+    if (color) uniforms.uPulseColor.value.copy(color)
+    uniforms.uPulseLevel.value = level
+  },
   clearRings() {
     uniforms.uRingLevel.value.fill(0)
   },
@@ -79,6 +89,9 @@ const COMMON_GLSL = /* glsl */ `
   uniform float uGlowLevel[SHAPES];
   uniform vec3 uRingColor[SHAPES];
   uniform float uRingLevel[SHAPES];
+  uniform vec3 uPulse[3];
+  uniform vec3 uPulseColor;
+  uniform float uPulseLevel;
   varying vec3 vRest;
 
   float capsuleDist(vec3 p, vec3 a, vec3 b, float r) {
@@ -170,6 +183,14 @@ const EMISSIVE_GLSL = /* glsl */ `
       extra = max(extra, max(pain, glow));
       extra += uRingColor[i] * uRingLevel[i] * ringBand[i] * 1.6;
     }
+    // Pain-path pulse: a bright core with a fading tail, through skin and clothes alike.
+    if (uPulseLevel > 0.0) {
+      float p0 = exp(-pow(length(vRest - uPulse[0]) / 0.075, 2.0));
+      float p1 = exp(-pow(length(vRest - uPulse[1]) / 0.065, 2.0)) * 0.55;
+      float p2 = exp(-pow(length(vRest - uPulse[2]) / 0.055, 2.0)) * 0.3;
+      vec3 core = mix(uPulseColor, vec3(1.0), 0.35);
+      extra += core * (p0 + p1 + p2) * uPulseLevel * 2.6;
+    }
     totalEmissiveRadiance += extra;
   }
 `
@@ -210,7 +231,7 @@ export function createPatientMaterial(source, restMatrix, maxAnisotropy = 8) {
       .replace('#include <color_fragment>', DIFFUSE_GLSL)
       .replace('#include <emissivemap_fragment>', EMISSIVE_GLSL)
   }
-  material.customProgramCacheKey = () => 'patient-material-v2'
+  material.customProgramCacheKey = () => 'patient-material-v3'
   return material
 }
 

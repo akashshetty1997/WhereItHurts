@@ -12,9 +12,9 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { VignetteShader } from 'three/addons/shaders/VignetteShader.js'
-import { visitStore, useVisit } from '../visitStore'
+import { visitStore, useVisit, unmentioned } from '../visitStore'
 import { regionLabel } from '../regions'
-import { registerBody, emitRegionClick, glow, setListening } from './bodyApi'
+import { registerBody, emitRegionClick, glow, setListening, pulse } from './bodyApi'
 import { DEV_SEGMENTS, DEV_SEGMENT_GAP_MS } from './devSegments'
 import IntakePicker from './IntakePicker'
 import { toTen, toUnit } from './intensity'
@@ -44,6 +44,42 @@ const GLOW_PEAK = 1.3
 const RING_SELECTED = { color: '#ffffff', level: 0.75 }
 const RING_LISTENING = { color: '#FFB74D', level: 1.1 }
 const RING_HOVER = { color: '#ffffff', level: 0.35 }
+// End of visit: marked pain nobody talked about glows amber on the body (plan D8).
+const FLAG_COLOR = new THREE.Color('#ffb300')
+const RING_FLAG = { color: '#ffb300', level: 1.0 }
+// Pain-path pulse (plan D7): travel speed, minimum duration, how many times it runs.
+const PULSE_SPEED = 0.55 // m/s along the path
+const PULSE_MIN_SECONDS = 1.3
+const PULSE_RUNS = 2
+const PULSE_TAIL = [0.07, 0.14] // trailing samples, as a fraction of the run
+
+// The pulse's route through the body: long regions (a leg) run end to end, picking the end
+// nearer to where the pulse came from; compact ones (a knee, a shoulder) are one waypoint.
+function pulseRoute(path, shapes) {
+  const points = []
+  for (const region of path) {
+    const shape = shapes[region]
+    if (!shape) continue
+    const prev = points[points.length - 1]
+    if (shape.a.distanceTo(shape.b) > 0.25) {
+      const [first, second] = prev && prev.distanceTo(shape.b) < prev.distanceTo(shape.a) ? [shape.b, shape.a] : [shape.a, shape.b]
+      points.push(first.clone(), second.clone())
+    } else {
+      points.push(shape.a.clone().add(shape.b).multiplyScalar(0.5))
+    }
+  }
+  const lengths = [0]
+  for (let i = 1; i < points.length; i++) lengths.push(lengths[i - 1] + points[i].distanceTo(points[i - 1]))
+  return { points, lengths, total: lengths[lengths.length - 1] }
+}
+
+function pointOnRoute(route, fraction, out) {
+  const d = THREE.MathUtils.clamp(fraction, 0, 1) * route.total
+  let i = 1
+  while (i < route.lengths.length - 1 && route.lengths[i] < d) i++
+  const span = route.lengths[i] - route.lengths[i - 1] || 1
+  return out.lerpVectors(route.points[i - 1], route.points[i], (d - route.lengths[i - 1]) / span)
+}
 
 // Regions on the back: their labels show only when the camera is behind the body.
 const BACK_REGIONS = new Set(['upper_back', 'lower_back'])
@@ -342,6 +378,16 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         if (region) setSelected(region)
         setListeningState(region)
       },
+      pulse(path, color) {
+        const route = pulseRoute(path, shapes)
+        if (route.points.length < 2 || route.total < 0.05) return
+        pulseRun = {
+          route,
+          color: new THREE.Color(color),
+          start: timer.getElapsed(),
+          seconds: Math.max(PULSE_MIN_SECONDS, route.total / PULSE_SPEED),
+        }
+      },
       select(region) {
         setSelected(region)
         emitRegionClick(region)
@@ -352,9 +398,15 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
     })
 
     // Integration: every new segment lights its regions in the speaker's color.
+    let pulseRun = null
+    const pulseHead = new THREE.Vector3()
+    const pulseTail1 = new THREE.Vector3()
+    const pulseTail2 = new THREE.Vector3()
     const offSegment = visitStore.onSegment((segment) => {
       const color = speakerColor(segment.speaker)
       segment.regions.forEach((region) => glow(region, color))
+      // Pain described as moving ("starts in my lower back and shoots down my left leg").
+      if (segment.path?.length > 1) pulse(segment.path, color)
     })
 
     // Drag (left or right button) orbits a full 360°, scroll zooms toward the pointer, and a short
@@ -547,35 +599,67 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       patientRoot.rotation.x = Math.sin(t * 0.37 + 1.3) * 0.0025
       floor.userData.ring.material.opacity = 0.28 + 0.1 * Math.sin(t * 1.2)
 
-      const painted = new Map(visitStore.get().painted.map((p) => [p.region, p]))
+      // Pain-path pulse: runs PULSE_RUNS times, fading in and out at each end of the route.
+      if (pulseRun) {
+        const elapsed = t - pulseRun.start
+        const run = Math.floor(elapsed / pulseRun.seconds)
+        if (run >= PULSE_RUNS) {
+          pulseRun = null
+          patientUniforms.setPulse([pulseHead, pulseTail1, pulseTail2], null, 0)
+        } else {
+          const u = (elapsed % pulseRun.seconds) / pulseRun.seconds
+          pointOnRoute(pulseRun.route, u, pulseHead)
+          pointOnRoute(pulseRun.route, u - PULSE_TAIL[0], pulseTail1)
+          pointOnRoute(pulseRun.route, u - PULSE_TAIL[1], pulseTail2)
+          const fade = Math.min(1, u / 0.08, (1 - u) / 0.12)
+          patientUniforms.setPulse([pulseHead, pulseTail1, pulseTail2], pulseRun.color, fade)
+        }
+      }
+
+      const visitNow = visitStore.get()
+      const painted = new Map(visitNow.painted.map((p) => [p.region, p]))
+      const ended = modeRef.current === 'ended'
+      const missed = ended ? new Set(unmentioned(visitNow).map((p) => p.region)) : null
       for (const region of SHAPE_ORDER) {
         const p = painted.get(region)
         patientUniforms.setPain(region, p?.type ?? null, p ? toUnit(p.intensity) : 0)
         const g = glows.get(region)
         const level = g ? glowEnvelope(t, g.start) * GLOW_PEAK : 0
         if (g && level === 0 && t - g.start > GLOW_RISE_S) glows.delete(region)
-        patientUniforms.setGlow(region, g ? g.color : null, level)
+        if (missed?.has(region)) {
+          // Missed pain: a steady amber glow that breathes slowly, over the pain look.
+          patientUniforms.setGlow(region, FLAG_COLOR, 0.75 + 0.25 * Math.sin(t * 2.2))
+        } else {
+          patientUniforms.setGlow(region, g ? g.color : null, level)
+        }
 
         const ring =
           listeningRef.current === region
             ? { ...RING_LISTENING, level: RING_LISTENING.level * (0.55 + 0.45 * Math.sin(t * 6)) }
             : selectedRef.current === region
               ? RING_SELECTED
-              : hovered === region && modeRef.current === 'paint'
-                ? RING_HOVER
-                : null
+              : missed?.has(region)
+                ? RING_FLAG
+                : hovered === region && modeRef.current === 'paint'
+                  ? RING_HOVER
+                  : null
         patientUniforms.setRing(region, ring?.color, ring?.level ?? 0)
       }
 
-      // Labels: during intake, every marked region shows "Right shoulder · aching · 5/10".
+      // Labels: during intake, every marked region shows "Right shoulder · aching · 5/10";
+      // at the end, every missed region says so.
       const intake = modeRef.current === 'paint'
       const cameraBehind = camera.position.z < controls.target.z
       labels.forEach((entry, region) => {
         const p = painted.get(region)
         const facing = !BACK_REGIONS.has(region) || cameraBehind
-        entry.label.visible = intake && !!p && facing
+        const isMissed = !!missed?.has(region)
+        entry.label.visible = (intake || isMissed) && !!p && facing
+        entry.el.classList.toggle('flag', isMissed)
         if (!entry.label.visible) return
-        const text = `${regionLabel(region)} · ${p.type} · ${toTen(p.intensity)}/10`
+        const text = isMissed
+          ? `${regionLabel(region)} · not discussed`
+          : `${regionLabel(region)} · ${p.type} · ${toTen(p.intensity)}/10`
         if (text !== entry.text) entry.el.textContent = entry.text = text
       })
 
@@ -605,6 +689,13 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         const fire = () => glow(devRegion, SPEAKER_COLORS.pt)
         fire()
         devGlowTimer = setInterval(fire, 3000)
+      }
+      // ?pulse=lower_back,left_leg runs the pain-path pulse every 4 s.
+      const devPulse = params.get('pulse')
+      if (devPulse) {
+        const fire = () => pulse(devPulse.split(','), SPEAKER_COLORS.patient)
+        setTimeout(fire, 2500)
+        devGlowTimer = setInterval(fire, 4000)
       }
       if (!devDemoPlayed && params.has('demo')) {
         devDemoPlayed = true
