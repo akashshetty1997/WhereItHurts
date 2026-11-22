@@ -41,8 +41,8 @@ function buildBody() {
   const body = new THREE.Group()
   const cap = (r, len) => new THREE.CapsuleGeometry(r, len, 8, 16)
   body.add(
-    part(new THREE.SphereGeometry(0.28, 32, 16), [0, 1.55, 0], 'head'),
-    part(new THREE.CylinderGeometry(0.1, 0.12, 0.25, 16), [0, 1.2, 0], 'neck'),
+    part(new THREE.SphereGeometry(0.28, 32, 16), [0, 1.74, 0], 'head'),
+    part(new THREE.CylinderGeometry(0.12, 0.14, 0.36, 16), [0, 1.38, 0], 'neck'),
     part(cap(0.36, 0.5), [0, 0.7, 0]),
     part(cap(0.32, 0.2), [0, 0.15, 0]),
     part(new THREE.BoxGeometry(0.6, 0.5, 0.08), [0, 0.72, -0.33], 'upper_back'),
@@ -68,7 +68,7 @@ function buildBody() {
 // A visible spine on the back, one small vertebra per level, each belonging to its region:
 // cervical = neck, thoracic = upper_back, lumbar = lower_back. Lights up with its region.
 const SPINE_SECTIONS = [
-  { region: 'neck', count: 4, top: 1.3, bottom: 1.1, z: -0.12, size: 0.07 },
+  { region: 'neck', count: 4, top: 1.5, bottom: 1.32, z: -0.135, size: 0.07 },
   { region: 'upper_back', count: 8, top: 0.95, bottom: 0.48, z: -0.385, size: 0.08 },
   { region: 'lower_back', count: 5, top: 0.38, bottom: 0.02, z: -0.355, size: 0.09 },
 ]
