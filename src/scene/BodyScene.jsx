@@ -703,13 +703,15 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         xray.a.copy(ghost.a)
         xray.b.copy(ghost.b)
         xray.radius = ghost.r
-        xray.goal = 1.6
+        xray.goal = 1
+        xray.skinGoal = 0.5 // a faint ghost outline (the rim), so the moving bones read clearly
       } else {
         // See-through around the anchor, or along a limb (fit.xray: { a, b, r }).
         xray.a.copy(fit.xray?.a ?? fit.target)
         xray.b.copy(fit.xray?.b ?? fit.target)
         xray.radius = fit.xray?.r ?? 0.28
         xray.goal = 1
+        xray.skinGoal = 1
       }
       setSkinSeeThrough(true)
       gtao.blendIntensity = 0
@@ -1062,7 +1064,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       // Show Anatomy fade (about 0.6 s each way).
       const xrayStep = timer.getDelta() / (reduceMotion ? 0.001 : 0.6)
       if (xray.skin !== xray.skinGoal) {
-        xray.skin = xray.skinGoal > xray.skin ? Math.min(1, xray.skin + xrayStep) : Math.max(0, xray.skin - xrayStep)
+        xray.skin = xray.skinGoal > xray.skin ? Math.min(xray.skinGoal, xray.skin + xrayStep) : Math.max(xray.skinGoal, xray.skin - xrayStep)
       }
       if (xray.level !== xray.goal) {
         const step = xrayStep
