@@ -75,6 +75,13 @@ MOVEMENT_WORDS = (
 )
 FOLLOW_UP_WORDS = ("follow-up", "follow up", "come back", "schedule")
 
+# --- PT vocabulary ---------------------------------------------------------------------------
+
+# Muscles, joints and movements with their region and common mishearings, in app/data/.
+# Edit the CSV to add words; services/vocabulary.py loads it once.
+PT_TERMS_FILE = "pt_terms.csv"
+PT_TERMS_ALIAS_SEPARATOR = "|"
+
 # --- Audio input -----------------------------------------------------------------------------
 
 SAMPLE_RATE = 16000

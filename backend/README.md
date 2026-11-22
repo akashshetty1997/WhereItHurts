@@ -6,6 +6,8 @@ FastAPI service for the two things the browser can't do on its own:
 - `POST /api/transcribe`: a finished visit recording → transcript lines labelled "Speaker 1", "Speaker 2", with timestamps (speech-to-text plus speaker diarization, all on CPU, nothing leaves the machine).
 - `GET /api/health`: `{status, transcription: ok|off}`.
 
+**PT vocabulary:** [app/data/pt_terms.csv](app/data/pt_terms.csv) lists about 70 muscles, joints and movements, each with its body region and common mishearings (like Amazon Transcribe Medical's custom vocabularies). Extraction fixes mishearings ("rotator cup" → "rotator cuff", returned as `corrected_text`) and lights the right region for PT words ("my trap is tight" → neck). To add a word, add a row.
+
 Interactive API docs: http://127.0.0.1:8000/docs
 
 ## Run

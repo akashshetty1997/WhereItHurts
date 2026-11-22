@@ -33,6 +33,7 @@ def _valid(extraction: Extraction) -> Extraction:
         regions=[r for r in extraction.regions if r in known],
         path=[r for r in extraction.path if r in known],
         follow_up=extraction.follow_up,
+        corrected_text=extraction.corrected_text,
     )
 
 
