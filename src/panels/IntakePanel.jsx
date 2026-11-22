@@ -6,6 +6,7 @@ import { visitStore } from '@/visitStore'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { PATIENTS } from '@/scene/patientRegions'
+import FacePhotoControl from '@/scene/FacePhotoControl'
 import { REGIONS, CLINICAL_TERMS } from '@/regions'
 import { toTen } from '@/scene/intensity'
 import { PAIN_STYLES, PAIN_ICONS } from '@/lib/visitDisplay'
@@ -59,6 +60,7 @@ export default function IntakePanel({ visit, mode, missed, selected, onSelectReg
           </ToggleGroup>
         </div>
       )}
+      {onPatientChange && mode === 'paint' && <FacePhotoControl />}
 
       <GoalSection goal={visit.goal} editable={mode === 'paint'} />
 

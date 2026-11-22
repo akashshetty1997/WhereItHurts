@@ -60,6 +60,13 @@ export function preloadAnatomy() {
   impl?.preloadAnatomy()
 }
 
+// Use My Photo: put the face in `photo` (a canvas, see src/scene/facePhoto.js) on the patient, or
+// null for the model's own face. Resolves when it's on; rejects with a reason to show.
+export function setFacePhoto(photo) {
+  if (!impl) return Promise.reject(new Error('The patient hasn’t loaded yet.'))
+  return impl.setFacePhoto(photo)
+}
+
 // Reports: a still of the whole body, 'front' or 'back', on white. Returns { url, aspect } (a PNG
 // data URL and its width / height), or null before the body has mounted.
 export function snapshot(side) {

@@ -24,6 +24,7 @@ import { createAnatomy } from './anatomy'
 import { createMovementSim } from './movementSim'
 import { MOVEMENTS } from './movements'
 import MovementPanel from './MovementPanel'
+import { faceTexture, loadSavedPhoto } from './facePhoto'
 import AnatomyOverlay from './AnatomyOverlay'
 import { createPatientMaterial, patientUniforms } from '../shaders/patientMaterial'
 import {
@@ -498,6 +499,10 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
           labels.set(region, { label, el, text: '' })
         }
         setLoaded(true)
+        // A face photo kept from earlier (Use My Photo) goes back on.
+        loadSavedPhoto()
+          .then((photo) => photo && !disposed && setFace(photo))
+          .catch((error) => console.warn('Saved face photo not applied:', error))
       })
 
     // THREE.Timer replaces the deprecated Clock; connect() avoids a huge jump after a tab switch.
@@ -563,6 +568,18 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       openMovement: (region) => openAnatomy(region, { sim: true }),
       playMovement: (region, label, direction) => playMovement(region, label, direction),
       preloadAnatomy: () => anatomy.preload(),
+      // Use My Photo: a canvas with a face, or null for the model's own face. Ends on a close-up.
+      async setFacePhoto(photo) {
+        if (anatomyRegion) closeAnatomy()
+        await setFace(photo)
+        // Reveal: a straight-on close-up of the face.
+        const head = headMesh()
+        if (!disposed && head) {
+          const box = new THREE.Box3().setFromObject(head)
+          const face = new THREE.Vector3((box.min.x + box.max.x) / 2, box.max.y - (box.max.y - box.min.y) * 0.4, 0)
+          moveTo({ target: face, radius: 1.05, phi: 1.5, theta: 0 }, 1.4)
+        }
+      },
       anatomyLayer: (layer, visible) => setAnatomyLayer(layer, visible),
       select(region) {
         setSelected(region)
@@ -572,6 +589,63 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         if (region) focusRegion(region)
       },
     })
+
+    // Use My Photo (src/scene/facePhoto.js). The head mesh is the one whose material is the head's.
+    const headMesh = () => patientMeshes.find((m) => /head/i.test([m.material].flat()[0]?.name ?? ''))
+    // A straight-on render of the face (the person's view is restored in the same tick), and a way
+    // to find the head texture's UV under any point of it.
+    function captureFace(head) {
+      const box = new THREE.Box3().setFromObject(head)
+      const size = box.getSize(new THREE.Vector3())
+      // The head mesh runs from the collar to the crown; the face sits in its upper part.
+      const aim = new THREE.Vector3((box.min.x + box.max.x) / 2, box.max.y - size.y * 0.4, (box.min.z + box.max.z) / 2)
+      const shotCamera = camera.clone()
+      const distance = (size.y * 0.42) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
+      shotCamera.position.set(aim.x, aim.y, aim.z + distance)
+      shotCamera.lookAt(aim)
+      shotCamera.updateMatrixWorld()
+      const saved = { position: camera.position.clone(), quaternion: camera.quaternion.clone(), bloom: bloom.enabled, vignette: vignette.enabled }
+      camera.position.copy(shotCamera.position)
+      camera.quaternion.copy(shotCamera.quaternion)
+      bloom.enabled = false
+      vignette.enabled = false
+      composer.render()
+      const image = document.createElement('canvas')
+      image.width = renderer.domElement.width
+      image.height = renderer.domElement.height
+      image.getContext('2d').drawImage(renderer.domElement, 0, 0)
+      camera.position.copy(saved.position)
+      camera.quaternion.copy(saved.quaternion)
+      bloom.enabled = saved.bloom
+      vignette.enabled = saved.vignette
+      composer.render()
+      const faceRay = new THREE.Raycaster()
+      const at = new THREE.Vector2()
+      return {
+        image,
+        uvAt(x, y) {
+          at.set(x * 2 - 1, 1 - y * 2)
+          faceRay.setFromCamera(at, shotCamera)
+          return faceRay.intersectObject(head, false)[0]?.uv?.clone() ?? null
+        },
+      }
+    }
+    let faceRequest = 0
+    async function setFace(photo) {
+      const head = headMesh()
+      if (!head) throw new Error('The patient hasn’t loaded yet.')
+      const material = [head.material].flat()[0]
+      material.userData.originalMap ??= material.map
+      const original = material.userData.originalMap
+      const request = ++faceRequest
+      let next = original
+      if (photo) {
+        next = await faceTexture(photo, original, captureFace(head))
+        if (disposed || request !== faceRequest) return next.dispose()
+      }
+      if (material.map !== original) material.map.dispose()
+      material.map = next
+    }
 
     // Show Anatomy: the skin around the region fades to see-through (the shader's x-ray sphere),
     // the reference anatomy appears inside, and ambient occlusion is turned off so it isn't
