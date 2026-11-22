@@ -5,6 +5,7 @@ import os
 
 os.environ["TRANSCRIBE_ENABLED"] = "false"
 os.environ["ANTHROPIC_API_KEY"] = ""
+os.environ["LLM_PROVIDER"] = "off"  # tests never call a real Claude
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

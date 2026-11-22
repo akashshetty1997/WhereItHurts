@@ -1,50 +1,57 @@
-"""Sentence -> body regions, pain path and follow-up. LLM first, keyword fallback.
+"""Sentence -> body regions, pain path, rating, movement, pain type and follow-up.
 
-The LLM call is a stub: implement _extract_with_llm and the rest already works around it.
+Two passes:
+- fast:  keywords + PT vocabulary, instant. The body lights from this.
+- smart: Claude (services/llm: Claude Code or the API), a few seconds. Fills in what keywords
+         can't (movements, context, misheard words) and is merged on top of the fast answer.
 """
 
 import logging
 
 from app.config import Settings
 from app.constants import EXTRACT_SOURCE_KEYWORDS, EXTRACT_SOURCE_LLM, REGION_IDS
-from app.schemas.extract import Extraction, ExtractResponse
+from app.schemas.extract import Extraction, ExtractRequest, ExtractResponse
+from app.services import llm
 from app.services.keywords import extract_keywords
 
 _logger = logging.getLogger("whereithurts.extraction")
 
 
-async def _extract_with_llm(text: str, settings: Settings) -> Extraction | None:
-    """None means "use the keyword fallback".
-
-    TODO(voice owner): call Claude here with settings.anthropic_api_key, using
-    constants.LLM_MODEL, LLM_MAX_TOKENS and LLM_TIMEOUT_S. Give it constants.REGION_IDS, say
-    left/right are the patient's side, ask for JSON matching schemas.extract.Extraction, and
-    never ask it to name a condition. Return None on timeout or bad JSON.
-    """
-    if not settings.anthropic_api_key:
-        return None
-    return None
-
-
-def _valid(extraction: Extraction) -> Extraction:
-    """Drop region ids the frontend doesn't know."""
+def _valid(extraction: Extraction, tapped: str | None) -> Extraction:
+    """Drop region ids the frontend doesn't know; a tapped region (voice intake) always counts."""
     known = set(REGION_IDS)
+    regions = [r for r in extraction.regions if r in known]
+    if tapped and tapped not in regions:
+        regions.insert(0, tapped)
+    return extraction.model_copy(
+        update={"regions": regions, "path": [r for r in extraction.path if r in known]}
+    )
+
+
+def extract_fast(request: ExtractRequest) -> ExtractResponse:
+    found = _valid(extract_keywords(request.text), request.region)
+    return ExtractResponse(**found.model_dump(), source=EXTRACT_SOURCE_KEYWORDS)
+
+
+def _merge(fast: Extraction, smart: Extraction) -> Extraction:
+    """Keywords are never wrong about what they found; Claude adds what they missed."""
     return Extraction(
-        regions=[r for r in extraction.regions if r in known],
-        path=[r for r in extraction.path if r in known],
-        follow_up=extraction.follow_up,
-        corrected_text=extraction.corrected_text,
+        regions=fast.regions + [r for r in smart.regions if r not in fast.regions],
+        path=smart.path if len(smart.path) > 1 else fast.path,  # one region isn't a path
+        follow_up=smart.follow_up or fast.follow_up,
+        corrected_text=smart.corrected_text or fast.corrected_text,
+        rating=smart.rating if smart.rating is not None else fast.rating,
+        movement=smart.movement,
+        pain_type=smart.pain_type or fast.pain_type,
     )
 
 
-async def extract(text: str, settings: Settings) -> ExtractResponse:
+async def extract_smart(request: ExtractRequest, settings: Settings) -> ExtractResponse:
+    """Raises llm.LlmUnavailableError when Claude can't answer; the caller keeps the fast one."""
+    fast = _valid(extract_keywords(request.text), request.region)
     try:
-        result = await _extract_with_llm(text, settings)
-    except Exception:  # noqa: BLE001 - any LLM failure falls back; the text is never logged
-        _logger.exception("llm_extract_failed chars=%d", len(text))
-        result = None
-    if result is not None:
-        return ExtractResponse(**_valid(result).model_dump(), source=EXTRACT_SOURCE_LLM)
-    return ExtractResponse(
-        **_valid(extract_keywords(text)).model_dump(), source=EXTRACT_SOURCE_KEYWORDS
-    )
+        smart = _valid(await llm.run(request, settings), request.region)
+    except llm.LlmUnavailableError as exc:
+        _logger.info("llm_unavailable provider=%s reason=%s", settings.llm_provider, exc)
+        raise
+    return ExtractResponse(**_merge(fast, smart).model_dump(), source=EXTRACT_SOURCE_LLM)
