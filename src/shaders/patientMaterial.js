@@ -6,7 +6,8 @@ import { PATIENTS, DEFAULT_PATIENT, SHAPE_ORDER, SHAPE_COUNT } from '../scene/pa
 // inside each region's capsule (scene/patientRegions.js) with a soft edge:
 //
 //   pain look   burning (rising flickering heat), sharp (jumping sparks), aching (slow pulse),
-//               glowing through the skin, brighter with the 0–10 rating
+//               glowing through the skin; the 0–10 rating sets how bright, how far it
+//               spreads and how fast it moves
 //   speech glow the speaker's color, fading out
 //   ring        a thin outline on the region's edge: selected, listening, hovered
 //   breathing   the chest rises and falls slightly (vertex displacement)
@@ -142,28 +143,30 @@ const NOISE_GLSL = /* glsl */ `
           mix(painHash(i + vec3(0, 1, 1)), painHash(i + vec3(1, 1, 1)), f.x), f.y),
       f.z);
   }
-  // p in meters on the 1.8 m body.
-  vec3 painLook(float type, vec3 p, float t) {
+  // p in meters on the 1.8 m body. level: the 0–1 rating; worse pain moves faster.
+  vec3 painLook(float type, vec3 p, float t, float level) {
     if (type < 0.5) return vec3(0.0);
+    float pace = 0.6 + 0.9 * level; // 3/10 ≈ 0.87x, 9/10 ≈ 1.4x
     if (type < 1.5) {
-      float n1 = painNoise(p * 16.0 + vec3(0.0, -t * 2.2, 0.0));
-      float n2 = painNoise(p * 36.0 + vec3(t * 1.3, -t * 3.6, 0.0));
+      float n1 = painNoise(p * 16.0 + vec3(0.0, -t * 2.2 * pace, 0.0));
+      float n2 = painNoise(p * 36.0 + vec3(t * 1.3, -t * 3.6 * pace, 0.0));
       float heat = clamp(n1 * 0.75 + n2 * 0.45, 0.0, 1.0);
-      float flicker = 0.75 + 0.25 * sin(t * 23.0 + n1 * 7.0);
+      float flicker = 0.75 + 0.25 * sin(t * 23.0 * pace + n1 * 7.0);
       return mix(vec3(0.9, 0.08, 0.02), vec3(1.0, 0.55, 0.08), heat) * (0.45 + 1.0 * heat) * flicker;
     }
     if (type < 2.5) {
-      float tick = floor(t * 7.0);
+      float tick = floor(t * 7.0 * pace);
       vec3 q = p * 26.0;
       vec3 seed = floor(q) + tick * vec3(1.7, 9.2, 3.1);
       vec3 spot = vec3(painHash(seed), painHash(seed + 11.3), painHash(seed + 27.1));
       float d = length(fract(q) - (0.2 + 0.6 * spot));
-      float spark = step(0.7, painHash(seed + 5.7)) * pow(smoothstep(0.42, 0.0, d), 1.5);
+      float spark = step(0.82 - 0.24 * level, painHash(seed + 5.7)) * pow(smoothstep(0.42, 0.0, d), 1.5);
       return vec3(1.0, 0.8, 0.12) * 0.45 + vec3(1.0, 0.97, 0.8) * spark * (2.4 + 0.5 * sin(t * 44.0));
     }
-    float beat = pow(0.5 + 0.5 * sin(t * 6.2831853), 1.6);
+    // Aching: about 0.7 beats a second at 3/10, 1.5 at 9/10.
+    float beat = pow(0.5 + 0.5 * sin(t * 6.2831853 * (0.45 + 1.15 * level)), 1.6);
     float n = painNoise(p * 12.0 + t * 0.25);
-    return vec3(0.55, 0.25, 1.0) * (0.45 + 1.2 * beat) * (0.8 + 0.4 * n);
+    return vec3(0.55, 0.25, 1.0) * (0.65 + 0.55 * beat) * (0.8 + 0.4 * n); // a steadier throb, so the rating (not the beat) sets the brightness
   }
 `
 
@@ -188,9 +191,11 @@ const DIFFUSE_GLSL = /* glsl */ `
     float d = capsuleDist(vRest, uShapeA[i], uShapeB[i], uShapeR[i]);
     painMask[i] = 1.0 - smoothstep(-0.025, 0.02, d);
     // Strongest at the center of the region, fading toward its edge, like pain under the skin.
-    painCore[i] = mix(0.3, 1.0, smoothstep(0.0, -0.75 * uShapeR[i], d));
+    // Worse pain fills more of the region: 9/10 stays strong almost to the edge, 3/10 is a soft center.
+    float spread = mix(0.95, 0.35, uPainLevel[i]);
+    painCore[i] = mix(0.15 + 0.35 * uPainLevel[i], 1.0, smoothstep(0.0, -spread * uShapeR[i], d));
     ringBand[i] = 1.0 - smoothstep(0.0, 0.009, abs(d + 0.004));
-    anyPain = max(anyPain, painMask[i] * painCore[i] * step(0.5, uPainType[i]) * (0.4 + 0.6 * uPainLevel[i]));
+    anyPain = max(anyPain, painMask[i] * painCore[i] * step(0.5, uPainType[i]) * (0.1 + 0.9 * uPainLevel[i]));
   }
   // Inflamed skin reads darker and redder under the glow, so the color carries.
   diffuseColor.rgb *= 1.0 - 0.45 * anyPain;
@@ -201,8 +206,9 @@ const EMISSIVE_GLSL = /* glsl */ `
   {
     vec3 extra = vec3(0.0);
     for (int i = 0; i < SHAPES; i++) {
-      float level = uPainType[i] > 0.5 ? 0.4 + 0.8 * uPainLevel[i] : 0.0;
-      vec3 pain = painLook(uPainType[i], vRest, uTime) * level * painMask[i] * painCore[i];
+      // The rating drives the strength: 3/10 ≈ 0.3 (soft, no bloom), 9/10 ≈ 1.35 (blooms).
+      float level = uPainType[i] > 0.5 ? 0.08 + 1.5 * pow(uPainLevel[i], 1.6) : 0.0;
+      vec3 pain = painLook(uPainType[i], vRest, uTime, uPainLevel[i]) * level * painMask[i] * painCore[i];
       vec3 glow = uGlowColor[i] * uGlowLevel[i] * painMask[i] * 0.9;
       extra = max(extra, max(pain, glow));
       extra += uRingColor[i] * uRingLevel[i] * ringBand[i] * 1.6;
@@ -271,7 +277,7 @@ export function createPatientMaterial(source, restMatrix, maxAnisotropy = 8) {
       .replace('#include <emissivemap_fragment>', EMISSIVE_GLSL)
       .replace('#include <opaque_fragment>', XRAY_GLSL)
   }
-  material.customProgramCacheKey = () => 'patient-material-v4'
+  material.customProgramCacheKey = () => 'patient-material-v5'
   return material
 }
 
