@@ -40,3 +40,8 @@ Speech models for `/api/transcribe` are optional; see [backend/README.md](backen
 Region ids: `head`, `neck`, `upper_back`, `lower_back`, `left_leg`, `left_knee`, `right_shoulder`. Spine regions show the clinical term too: neck (cervical spine), upper back (thoracic spine), lower back (lumbar spine).
 
 Controls: left-click paints/selects, right-drag rotates, scroll zooms.
+
+## Credits
+
+- **Patient model:** "Sports_Male_04" from [Microsoft Rocketbox](https://github.com/microsoft/Microsoft-Rocketbox), MIT License (`public/models/LICENSE-rocketbox.txt`). Converted to a static glTF (A-pose baked, PBR roughness from the specular maps) and compressed with gltf-transform (meshopt + WebP): `public/models/patient.glb`, 1.4 MB.
+- **Studio lighting:** "Studio Small 08" HDRI from [Poly Haven](https://polyhaven.com/a/studio_small_08), CC0: `public/hdri/studio_small_08_1k.hdr`.

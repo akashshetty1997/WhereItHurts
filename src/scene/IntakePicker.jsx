@@ -8,7 +8,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { PAIN_STYLES } from '@/lib/visitDisplay'
 import { cn } from '@/lib/utils'
 
-// Shown beside the body when a region is tapped during intake. Voice fills the same entry;
+// Shown in the stage's bottom-right corner (clear of the body) when a region is tapped during intake. Voice fills the same entry;
 // these controls are the fallback when speech fails or the patient prefers to tap.
 export default function IntakePicker({ region, entry, listening, onClose }) {
   const intensity = entry ? toTen(entry.intensity) : 5
@@ -27,7 +27,7 @@ export default function IntakePicker({ region, entry, listening, onClose }) {
 
   return (
     <div
-      className="absolute top-1/2 right-4 w-72 -translate-y-1/2 space-y-4 rounded-2xl bg-card/95 p-4 shadow-2xl ring-1 ring-foreground/10 backdrop-blur animate-in fade-in slide-in-from-right-2"
+      className="absolute right-4 bottom-4 w-72 space-y-4 rounded-2xl bg-card/95 p-4 shadow-2xl ring-1 ring-foreground/10 backdrop-blur animate-in fade-in slide-in-from-bottom-2"
       onPointerDown={(e) => e.stopPropagation()}
     >
       <div className="flex items-start justify-between gap-2">
