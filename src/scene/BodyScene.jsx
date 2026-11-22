@@ -16,6 +16,7 @@ import { visitStore, useVisit, unmentioned } from '../visitStore'
 import { regionLabel } from '../regions'
 import { registerBody, emitRegionClick, glow, setListening, pulse } from './bodyApi'
 import { DEV_SEGMENTS, DEV_SEGMENT_GAP_MS } from './devSegments'
+import { extract } from '@/panels/speech'
 import IntakePicker from './IntakePicker'
 import { toTen, toUnit } from './intensity'
 import { PATIENTS, DEFAULT_PATIENT, SHAPE_ORDER, regionAt, regionAnchor } from './patientRegions'
@@ -47,6 +48,8 @@ const RING_HOVER = { color: '#ffffff', level: 0.35 }
 // End of visit: marked pain nobody talked about glows amber on the body (plan D8).
 const FLAG_COLOR = new THREE.Color('#ffb300')
 const RING_FLAG = { color: '#ffb300', level: 1.0 }
+// Movement check: the area the PT tested gets its own ring (teal: not a speaker, not a pain type).
+const RING_ASSESSED = { color: '#5eead4', level: 0.95 }
 // Pain-path pulse (plan D7): travel speed, minimum duration, how many times it runs.
 const PULSE_SPEED = 0.55 // m/s along the path
 const PULSE_MIN_SECONDS = 1.3
@@ -201,10 +204,19 @@ let devDemoPlayed = false
 function playDevSegments() {
   // Until mockVisit.js moves to v2, the PT is still called "doctor" there.
   const ptRole = visitStore.get().speakers?.pt ? 'pt' : 'doctor'
+  // Each line goes through /api/extract like live speech, so ratings and movements come along.
   DEV_SEGMENTS.forEach((seg, i) => {
-    setTimeout(() => {
+    setTimeout(async () => {
       const speaker = seg.speaker === 'pt' ? ptRole : seg.speaker
-      visitStore.addSegment({ id: `dev-${Date.now()}-${i}`, path: [], ...seg, speaker })
+      const found = await extract(seg.text, speaker === 'patient' ? 'patient' : 'pt').catch(() => ({}))
+      visitStore.addSegment({
+        id: `dev-${Date.now()}-${i}`,
+        path: [],
+        ...seg,
+        speaker,
+        rating: found.rating ?? null,
+        movement: found.movement ?? null,
+      })
     }, i * DEV_SEGMENT_GAP_MS)
   })
 }
@@ -378,6 +390,9 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         if (region) setSelected(region)
         setListeningState(region)
       },
+      showRatings(region, rating) {
+        ratingOverride = region ? { region, rating } : null
+      },
       pulse(path, color) {
         const route = pulseRoute(path, shapes)
         if (route.points.length < 2 || route.total < 0.05) return
@@ -398,6 +413,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
     })
 
     // Integration: every new segment lights its regions in the speaker's color.
+    let ratingOverride = null // { region, rating }: Before / After from the movement check
     let pulseRun = null
     const pulseHead = new THREE.Vector3()
     const pulseTail1 = new THREE.Vector3()
@@ -620,9 +636,15 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       const painted = new Map(visitNow.painted.map((p) => [p.region, p]))
       const ended = modeRef.current === 'ended'
       const missed = ended ? new Set(unmentioned(visitNow).map((p) => p.region)) : null
+      const checks = visitNow.observations ?? []
+      const assessed = modeRef.current !== 'paint' ? (checks[checks.length - 1]?.assessedRegion ?? null) : null
       for (const region of SHAPE_ORDER) {
         const p = painted.get(region)
-        patientUniforms.setPain(region, p?.type ?? null, p ? toUnit(p.intensity) : 0)
+        if (ratingOverride?.region === region) {
+          patientUniforms.setPain(region, p?.type ?? 'aching', ratingOverride.rating / 10)
+        } else {
+          patientUniforms.setPain(region, p?.type ?? null, p ? toUnit(p.intensity) : 0)
+        }
         const g = glows.get(region)
         const level = g ? glowEnvelope(t, g.start) * GLOW_PEAK : 0
         if (g && level === 0 && t - g.start > GLOW_RISE_S) glows.delete(region)
@@ -640,6 +662,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
               ? RING_SELECTED
               : missed?.has(region)
                 ? RING_FLAG
+                : assessed === region
+                ? RING_ASSESSED
                 : hovered === region && modeRef.current === 'paint'
                   ? RING_HOVER
                   : null
@@ -654,12 +678,16 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         const p = painted.get(region)
         const facing = !BACK_REGIONS.has(region) || cameraBehind
         const isMissed = !!missed?.has(region)
-        entry.label.visible = (intake || isMissed) && !!p && facing
+        const isAssessed = assessed === region && !isMissed
+        entry.label.visible = (((intake || isMissed) && !!p) || isAssessed) && facing
         entry.el.classList.toggle('flag', isMissed)
+        entry.el.classList.toggle('assessed', isAssessed)
         if (!entry.label.visible) return
         const text = isMissed
           ? `${regionLabel(region)} · not discussed`
-          : `${regionLabel(region)} · ${p.type} · ${toTen(p.intensity)}/10`
+          : isAssessed
+            ? `Area assessed by PT · ${regionLabel(region)}`
+            : `${regionLabel(region)} · ${p.type} · ${toTen(p.intensity)}/10`
         if (text !== entry.text) entry.el.textContent = entry.text = text
       })
 

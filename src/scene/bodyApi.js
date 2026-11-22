@@ -30,6 +30,12 @@ export function pulse(path, color) {
   impl?.pulse(path, color)
 }
 
+// Movement check "Before / After": show a region's pain at this rating (0–10) instead of the
+// marked one, or (null, null) to go back.
+export function showRatings(region, rating) {
+  impl?.showRatings(region, rating)
+}
+
 // Subscribe to region clicks. The callback gets a region id, or null for a miss. Returns unsubscribe.
 export function onRegionClick(callback) {
   clickListeners.add(callback)

@@ -3,7 +3,13 @@ import { mockVisit } from './mockVisit'
 
 // One visit state. Painting and speech write; the 3D body and UI only read.
 // A real visit starts empty; mockVisit only supplies the shape and the speaker colors.
-const emptyVisit = () => ({ ...structuredClone(mockVisit), painted: [], segments: [], followUps: [] })
+const emptyVisit = () => ({
+  ...structuredClone(mockVisit),
+  painted: [],
+  segments: [],
+  followUps: [],
+  observations: [],
+})
 let state = emptyVisit()
 const listeners = new Set()
 const segmentListeners = new Set()
@@ -31,6 +37,18 @@ export const visitStore = {
   setGoal(text) {
     const clean = text.trim()
     state = { ...state, goal: clean ? { text: clean, discussed: false } : null }
+    emit()
+  },
+  // Movement checks (docs/PLAN.md → observations): one per movement the PT tested.
+  addObservation(observation) {
+    state = { ...state, observations: [...(state.observations ?? []), observation] }
+    emit()
+  },
+  updateObservation(id, patch) {
+    state = {
+      ...state,
+      observations: (state.observations ?? []).map((o) => (o.id === id ? { ...o, ...patch } : o)),
+    }
     emit()
   },
   addFollowUp(followUp) {
