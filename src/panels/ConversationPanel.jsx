@@ -1,4 +1,5 @@
-import { CircleAlert, CircleCheck } from 'lucide-react'
+import { CircleAlert, CircleCheck, Target } from 'lucide-react'
+import { goalDiscussed } from '@/visitStore'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { regionLabel, REGIONS } from '@/regions'
 import { toTen } from '@/scene/intensity'
@@ -17,6 +18,20 @@ export default function ConversationPanel({ visit, mode, selected, missed }) {
       {mode === 'ended' && (
         <section className="space-y-2" aria-label="End of visit check">
           <h2 className="text-xl font-bold">Did Everything Come Up?</h2>
+          {visit.goal?.text && (
+            <p
+              className={cn(
+                'flex gap-3 rounded-xl p-4 text-base leading-snug ring-1',
+                goalDiscussed(visit) ? 'bg-clear/10 ring-clear/40' : 'bg-flag/10 ring-flag/60',
+              )}
+            >
+              <Target className={cn('mt-0.5 size-5 shrink-0', goalDiscussed(visit) ? 'text-clear' : 'text-flag')} aria-hidden />
+              <span>
+                Your goal, “{visit.goal.text}”,{' '}
+                {goalDiscussed(visit) ? 'came up in the visit.' : 'didn’t come up. Ask about it before you leave.'}
+              </span>
+            </p>
+          )}
           {missed.length === 0 ? (
             <p className="flex gap-3 rounded-xl bg-clear/10 p-4 text-base text-clear ring-1 ring-clear/40">
               <CircleCheck className="mt-0.5 size-5 shrink-0" aria-hidden />

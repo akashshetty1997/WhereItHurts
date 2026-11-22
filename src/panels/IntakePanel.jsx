@@ -1,4 +1,8 @@
-import { CircleAlert, Plus } from 'lucide-react'
+import { CircleAlert, Mic, Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { visitStore } from '@/visitStore'
+import { useHoldToSpeak } from './useHoldToSpeak'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { PATIENTS } from '@/scene/patientRegions'
@@ -56,16 +60,7 @@ export default function IntakePanel({ visit, mode, missed, selected, onSelectReg
         </div>
       )}
 
-      <section aria-label="What you want to do again" className="space-y-1">
-        <h3 className="text-sm font-bold text-muted-foreground">Your Goal</h3>
-        {visit.goal?.text ? (
-          <p className="text-base font-bold leading-snug">{visit.goal.text}</p>
-        ) : (
-          <p className="text-sm leading-snug text-muted-foreground">
-            What would you like to be able to do again? Say it out loud, like “Put plates on the top shelf.”
-          </p>
-        )}
-      </section>
+      <GoalSection goal={visit.goal} editable={mode === 'paint'} />
 
       <section aria-label="Body parts" className="flex min-h-0 flex-1 flex-col gap-2">
         <h3 className="text-sm font-bold text-muted-foreground">Body Parts</h3>
@@ -125,5 +120,53 @@ export default function IntakePanel({ visit, mode, missed, selected, onSelectReg
         </ScrollArea>
       </section>
     </aside>
+  )
+}
+
+// The patient's goal: what they want to be able to do again. Spoken (hold the button) or typed;
+// pinned here for the whole visit.
+function GoalSection({ goal, editable }) {
+  const speech = useHoldToSpeak((text) => visitStore.setGoal(text))
+  return (
+    <section aria-label="What you want to do again" className="space-y-2">
+      <h3 className="text-sm font-bold text-muted-foreground">Your Goal</h3>
+      {goal?.text ? (
+        <p className="text-lg font-bold leading-snug">“{goal.text}”</p>
+      ) : (
+        <p className="text-sm leading-snug text-muted-foreground">
+          {speech.listening ? speech.interim || 'Listening…' : 'What would you like to be able to do again?'}
+        </p>
+      )}
+      {editable && (
+        <>
+          {speech.supported && (
+            <Button
+              variant="secondary"
+              className={cn('w-full touch-none gap-2 font-bold select-none', speech.listening && 'bg-patient text-background')}
+              onPointerDown={speech.start}
+              onPointerUp={speech.stop}
+              onPointerLeave={() => speech.listening && speech.stop()}
+              onKeyDown={(e) => e.key === ' ' && !e.repeat && speech.start()}
+              onKeyUp={(e) => e.key === ' ' && speech.stop()}
+              aria-pressed={speech.listening}
+            >
+              <Mic className="size-4" aria-hidden />
+              {speech.listening ? 'Listening… release when done' : goal?.text ? 'Hold to Say It Again' : 'Hold to Say Your Goal'}
+            </Button>
+          )}
+          {speech.error && <p className="text-sm text-flag">{speech.error}</p>}
+          {!goal?.text && <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              const field = e.currentTarget.elements.goal
+              visitStore.setGoal(field.value)
+              field.value = ''
+            }}
+          >
+            <Input name="goal" placeholder="Or type it, then press Return" aria-label="Type your goal" />
+          </form>}
+        </>
+      )}
+    </section>
   )
 }
