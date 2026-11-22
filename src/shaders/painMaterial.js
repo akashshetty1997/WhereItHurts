@@ -9,6 +9,8 @@ import * as THREE from 'three'
 //   aching:  deep purple, a slow steady pulse about once per second
 //
 // The rating (0–10) sets brightness. A speech glow mixes in on top (brightest channel wins).
+// Every part also gets a hologram rim (Fresnel, brighter where the surface turns away from the
+// camera) and faint scan lines rising up the body. Hover raises the rim.
 
 export const PAIN_TYPE_IDS = { burning: 1, sharp: 2, aching: 3 }
 
@@ -25,6 +27,8 @@ const NOISE_GLSL = /* glsl */ `
   uniform float uPainLevel;
   uniform vec3 uGlowColor;
   uniform float uGlowLevel;
+  uniform vec3 uRimColor;
+  uniform float uRimStrength;
   varying vec3 vPainPos;
 
   float painHash(vec3 p) {
@@ -72,7 +76,7 @@ const NOISE_GLSL = /* glsl */ `
       // Aching: deep purple, one slow heavy beat per second, slightly uneven.
       float beat = pow(0.5 + 0.5 * sin(t * 6.2831853), 1.6);
       float n = painNoise(p * 5.0 + t * 0.25);
-      return vec3(0.45, 0.18, 0.9) * (0.28 + 0.95 * beat) * (0.8 + 0.4 * n);
+      return vec3(0.55, 0.25, 1.0) * (0.45 + 1.2 * beat) * (0.8 + 0.4 * n);
     }
     return vec3(0.0);
   }
@@ -90,18 +94,33 @@ const EMISSIVE_GLSL = /* glsl */ `
     // Rating 1/10 is still visible; 10/10 is about 3x brighter.
     float level = uPainLevel > 0.0 ? 0.35 + 0.85 * uPainLevel : 0.0;
     vec3 pain = painLook(vPainPos, uTime) * level;
-    totalEmissiveRadiance = max(totalEmissiveRadiance, max(pain, uGlowColor * uGlowLevel));
+    vec3 lit = max(pain, uGlowColor * uGlowLevel);
+
+    // Hologram: Fresnel rim in view space (normal and vViewPosition are both view space here),
+    // plus one soft scanner band sweeping up the body every ~5 s. Dimmed on painted parts so the
+    // pain color stays readable.
+    float facing = abs(dot(normal, normalize(vViewPosition)));
+    float rim = pow(1.0 - facing, 2.4);
+    float bandY = mod(uTime * 0.9, 5.0) - 2.3;
+    float band = exp(-pow((vPainPos.y - bandY) * 7.0, 2.0));
+    float keep = 1.0 - 0.7 * min(1.0, level + uGlowLevel);
+    vec3 holo = uRimColor * (rim * uRimStrength + band * (0.12 + rim * 0.5)) * keep;
+
+    totalEmissiveRadiance = max(totalEmissiveRadiance, lit) + holo;
   }
 `
 
 export function createPainMaterial(color) {
-  const material = new THREE.MeshStandardMaterial({ color, roughness: 0.6 })
+  // Dark glassy surface; the rim and the environment reflections do the shaping.
+  const material = new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.15 })
   const uniforms = {
     uTime: timeUniform,
     uPainType: { value: 0 },
     uPainLevel: { value: 0 },
     uGlowColor: { value: new THREE.Color(0, 0, 0) },
     uGlowLevel: { value: 0 },
+    uRimColor: { value: new THREE.Color('#7fd6ff') },
+    uRimStrength: { value: 0.9 },
   }
   material.userData.painUniforms = uniforms
   material.onBeforeCompile = (shader) => {
@@ -118,7 +137,7 @@ export function createPainMaterial(color) {
       .replace('#include <emissivemap_fragment>', EMISSIVE_GLSL)
   }
   // Same code for every part, so three.js compiles it once.
-  material.customProgramCacheKey = () => 'pain-material-v2'
+  material.customProgramCacheKey = () => 'pain-material-v4'
   return material
 }
 
@@ -134,4 +153,9 @@ export function setGlow(material, color, level) {
   const u = material.userData.painUniforms
   if (color) u.uGlowColor.value.copy(color)
   u.uGlowLevel.value = color ? level : 0
+}
+
+// Hologram rim strength: ~0.9 normally, higher on hover or selection.
+export function setRim(material, strength) {
+  material.userData.painUniforms.uRimStrength.value = strength
 }
