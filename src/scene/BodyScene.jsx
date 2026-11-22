@@ -1,9 +1,14 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { visitStore } from '../visitStore'
-import { registerBody, emitRegionClick, glow } from './bodyApi'
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+import { visitStore, useVisit } from '../visitStore'
+import { regionLabel } from '../regions'
+import { registerBody, emitRegionClick, glow, setListening } from './bodyApi'
 import { DEV_SEGMENTS, DEV_SEGMENT_GAP_MS } from './devSegments'
+import IntakePicker from './IntakePicker'
+import { toTen, toUnit } from './intensity'
+import './scene.css'
 
 // Placeholder body: capsules and boxes (PLAN fallback) until a GLB is ready.
 // The body faces +z (toward the camera), so the PATIENT's left is +x.
@@ -17,6 +22,13 @@ const SPEAKER_COLORS = { pt: '#4FC3F7', doctor: '#4FC3F7', patient: '#FFB74D' }
 const GLOW_RISE_S = 0.15
 const GLOW_FADE_S = 2.35
 const GLOW_PEAK = 1.4
+
+// Ring around a tapped region (inverted hull): white when selected, pulsing orange while listening.
+const RING_SCALE = 1.12
+const RING_SELECTED = '#ffffff'
+const RING_LISTENING = '#FFB74D'
+// Regions on the back: their labels show only when the camera is behind the body.
+const BACK_REGIONS = new Set(['upper_back', 'lower_back'])
 
 function part(geometry, position, region = null, color = SKIN) {
   const mesh = new THREE.Mesh(
@@ -81,9 +93,6 @@ function glowEnvelope(t, start) {
   return Math.max(0, 1 - (age - GLOW_RISE_S) / GLOW_FADE_S)
 }
 
-// v1 mock stores intensity 0–1, v2 stores 0–10.
-const normalizeIntensity = (i) => (i > 1 ? i / 10 : i)
-
 function speakerColor(speaker) {
   return visitStore.get().speakers?.[speaker]?.color ?? SPEAKER_COLORS[speaker] ?? '#ffffff'
 }
@@ -100,10 +109,39 @@ function playDevSegments() {
   })
 }
 
-export default function BodyScene({ onRegionClick }) {
+
+// Dev-only: ?fakevoice pretends the patient spoke after a tap, so intake works without speech.
+function fakeVoiceIntake(region) {
+  setListening(region)
+  setTimeout(() => {
+    setListening(null)
+    const painted = visitStore.get().painted.filter((p) => p.region !== region)
+    visitStore.setPainted([
+      ...painted,
+      { region, type: 'aching', intensity: 5, note: 'It aches, about a five, when I reach up.' },
+    ])
+  }, 1500)
+}
+
+export default function BodyScene({ onRegionClick, mode = 'paint' }) {
   const mountRef = useRef(null)
   const clickRef = useRef(onRegionClick)
   clickRef.current = onRegionClick
+  const modeRef = useRef(mode)
+  modeRef.current = mode
+
+  const visit = useVisit()
+  const [selected, setSelected] = useState(null)
+  const [listening, setListeningState] = useState(null)
+  const selectedRef = useRef(null)
+  const listeningRef = useRef(null)
+  selectedRef.current = selected
+  listeningRef.current = listening
+
+  // Leaving intake (Start visit) closes the picker.
+  useEffect(() => {
+    if (mode !== 'paint') setSelected(null)
+  }, [mode])
 
   useEffect(() => {
     const mount = mountRef.current
@@ -115,6 +153,13 @@ export default function BodyScene({ onRegionClick }) {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     mount.appendChild(renderer.domElement)
 
+    // HTML labels pinned to regions; they never take clicks.
+    const labelRenderer = new CSS2DRenderer()
+    labelRenderer.domElement.style.position = 'absolute'
+    labelRenderer.domElement.style.inset = '0'
+    labelRenderer.domElement.style.pointerEvents = 'none'
+    mount.appendChild(labelRenderer.domElement)
+
     scene.add(new THREE.HemisphereLight('#ffffff', '#334', 1.2))
     const key = new THREE.DirectionalLight('#ffffff', 1.5)
     key.position.set(3, 4, 5)
@@ -123,13 +168,44 @@ export default function BodyScene({ onRegionClick }) {
     const body = buildBody()
     scene.add(body)
 
-    // region id -> its meshes (left_leg has two)
+    // region id -> its meshes (left_leg has two; spine regions include their vertebrae)
     const regionMeshes = new Map()
     body.children.forEach((mesh) => {
       const region = mesh.userData.region
       if (!region) return
       if (!regionMeshes.has(region)) regionMeshes.set(region, [])
       regionMeshes.get(region).push(mesh)
+    })
+
+    // Per region: a ring (inverted hull on each mesh) and a label at the region's center.
+    const rings = new Map()
+    const labels = new Map()
+    regionMeshes.forEach((meshes, region) => {
+      const ringMaterial = new THREE.MeshBasicMaterial({
+        color: RING_SELECTED,
+        side: THREE.BackSide,
+        transparent: true,
+        opacity: 0.7,
+      })
+      meshes.forEach((mesh) => {
+        const hull = new THREE.Mesh(mesh.geometry, ringMaterial)
+        hull.scale.setScalar(RING_SCALE)
+        hull.raycast = () => {}
+        hull.visible = false
+        hull.userData.isRing = true
+        mesh.add(hull)
+      })
+      rings.set(region, { material: ringMaterial, meshes })
+
+      // Anchor on the region's first (main) mesh: the thigh for left_leg, not the vertebrae.
+      const center = meshes[0].position.clone()
+      const el = document.createElement('div')
+      el.className = 'region-label'
+      const label = new CSS2DObject(el)
+      label.position.copy(center)
+      label.visible = false
+      body.add(label)
+      labels.set(region, { label, el, text: '', center })
     })
 
     const clock = new THREE.Clock()
@@ -140,6 +216,10 @@ export default function BodyScene({ onRegionClick }) {
       glow(region, color) {
         if (!regionMeshes.has(region)) return
         glows.set(region, { color: new THREE.Color(color), start: clock.getElapsedTime() })
+      },
+      setListening(region) {
+        if (region) setSelected(region)
+        setListeningState(region)
       },
     })
 
@@ -157,6 +237,7 @@ export default function BodyScene({ onRegionClick }) {
     const onContextMenu = (e) => e.preventDefault()
     renderer.domElement.addEventListener('contextmenu', onContextMenu)
 
+    const fakeVoice = import.meta.env.DEV && new URLSearchParams(location.search).has('fakevoice')
     const raycaster = new THREE.Raycaster()
     const pointer = new THREE.Vector2()
     const onPointerDown = (e) => {
@@ -169,14 +250,23 @@ export default function BodyScene({ onRegionClick }) {
       raycaster.setFromCamera(pointer, camera)
       const hit = raycaster.intersectObjects(body.children)[0]
       const region = hit?.object.userData.region ?? null
+      if (modeRef.current === 'paint') {
+        setSelected(region)
+        if (region && fakeVoice) fakeVoiceIntake(region)
+      }
       emitRegionClick(region)
       clickRef.current?.(region)
     }
     renderer.domElement.addEventListener('pointerdown', onPointerDown)
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setSelected(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
 
     const resize = () => {
       const { clientWidth: w, clientHeight: h } = mount
       renderer.setSize(w, h)
+      labelRenderer.setSize(w, h)
       camera.aspect = w / h
       camera.updateProjectionMatrix()
     }
@@ -190,10 +280,11 @@ export default function BodyScene({ onRegionClick }) {
       const painted = new Map(visitStore.get().painted.map((p) => [p.region, p]))
       body.children.forEach((mesh) => {
         const region = mesh.userData.region
+        if (!mesh.isMesh) return
         const mat = mesh.material
         // Paint look (placeholder until the pain-type shader, D6): slow pulse in the type's color.
         const p = painted.get(region)
-        const paintLevel = p ? normalizeIntensity(p.intensity) * (0.6 + 0.4 * Math.sin(t * 2 * Math.PI)) : 0
+        const paintLevel = p ? toUnit(p.intensity) * (0.6 + 0.4 * Math.sin(t * 2 * Math.PI)) : 0
         if (p) paintColor.set(PAIN_COLORS[p.type] ?? SKIN)
 
         const g = glows.get(region)
@@ -210,12 +301,36 @@ export default function BodyScene({ onRegionClick }) {
           mat.emissiveIntensity = 0
         }
       })
+
+      // Rings: selected = steady white, listening = pulsing orange.
+      rings.forEach(({ material, meshes }, region) => {
+        const isListening = listeningRef.current === region
+        const show = isListening || selectedRef.current === region
+        meshes.forEach((m) => m.children.forEach((c) => c.userData.isRing && (c.visible = show)))
+        if (!show) return
+        material.color.set(isListening ? RING_LISTENING : RING_SELECTED)
+        material.opacity = isListening ? 0.45 + 0.4 * Math.sin(t * 6) : 0.6
+      })
+
+      // Labels: during intake, every marked region shows "Right shoulder · aching · 5/10".
+      const intake = modeRef.current === 'paint'
+      const cameraBehind = camera.position.z < 0
+      labels.forEach((entry, region) => {
+        const p = painted.get(region)
+        const facing = !BACK_REGIONS.has(region) || cameraBehind
+        entry.label.visible = intake && !!p && facing
+        if (!entry.label.visible) return
+        const text = `${regionLabel(region)} · ${p.type} · ${toTen(p.intensity)}/10`
+        if (text !== entry.text) entry.el.textContent = entry.text = text
+      })
+
       controls.update()
       renderer.render(scene, camera)
+      labelRenderer.render(scene, camera)
     })
 
     // Dev-only URL options: ?demo plays the script, ?view=back starts facing the back,
-    // ?glow=<region> lights one region (repeats every 3 s).
+    // ?glow=<region> lights one region (repeats every 3 s), ?fakevoice fakes speech after a tap.
     let devGlowTimer = null
     if (import.meta.env.DEV) {
       const params = new URLSearchParams(location.search)
@@ -241,14 +356,31 @@ export default function BodyScene({ onRegionClick }) {
       controls.dispose()
       renderer.domElement.removeEventListener('pointerdown', onPointerDown)
       renderer.domElement.removeEventListener('contextmenu', onContextMenu)
-      body.traverse((o) => {
+      window.removeEventListener('keydown', onKeyDown)
+      rings.forEach(({ material }) => material.dispose())
+      body.children.forEach((o) => {
         o.geometry?.dispose()
         o.material?.dispose()
       })
       renderer.dispose()
       mount.removeChild(renderer.domElement)
+      mount.removeChild(labelRenderer.domElement)
     }
   }, [])
 
-  return <div ref={mountRef} className="scene" />
+  const entry = selected ? visit.painted.find((p) => p.region === selected) : null
+
+  return (
+    <div className="scene">
+      <div ref={mountRef} className="scene" />
+      {mode === 'paint' && selected && (
+        <IntakePicker
+          region={selected}
+          entry={entry}
+          listening={listening === selected}
+          onClose={() => setSelected(null)}
+        />
+      )}
+    </div>
+  )
 }
