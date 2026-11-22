@@ -18,4 +18,10 @@ def test_extract_uses_keywords_without_an_api_key(client) -> None:
 
 def test_extract_rejects_empty_text_and_unknown_speaker(client) -> None:
     assert client.post("/api/extract", json={"text": ""}).status_code == 422
-    assert client.post("/api/extract", json={"text": "hi", "speaker": "nurse"}).status_code == 422
+    assert client.post("/api/extract", json={"text": "hi", "speaker": "doctor"}).status_code == 422
+
+
+def test_extract_accepts_pt_as_speaker(client) -> None:
+    res = client.post("/api/extract", json={"text": "Let me check your neck.", "speaker": "pt"})
+    assert res.status_code == 200
+    assert res.json()["regions"] == ["neck"]

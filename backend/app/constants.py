@@ -24,7 +24,10 @@ REGION_IDS = (
     "right_shoulder",
 )
 PAIN_TYPES = ("burning", "sharp", "aching")
-SPEAKER_ROLES = ("doctor", "patient")
+SPEAKER_ROLES = ("pt", "patient")  # pt = the physical therapist
+# Side words. A region id starting with one side ("left_knee") is not counted when the word
+# right before the body part names the other side ("my right knee"): we have no region for it.
+SIDES = ("left", "right")
 MAX_SENTENCE_CHARS = 1000
 
 # --- LLM extraction (sentence -> regions, path, follow-up) ----------------------------------

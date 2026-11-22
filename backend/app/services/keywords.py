@@ -7,7 +7,7 @@ Mishearings are corrected first with the PT vocabulary (services/vocabulary.py),
 import re
 from functools import lru_cache
 
-from app.constants import FOLLOW_UP_WORDS, MOVEMENT_WORDS
+from app.constants import FOLLOW_UP_WORDS, MOVEMENT_WORDS, SIDES
 from app.schemas.extract import Extraction
 from app.services import vocabulary
 
@@ -28,13 +28,26 @@ def _first_match(text: str, phrases: tuple[str, ...]) -> int | None:
     return min(found) if found else None
 
 
+def _wrong_side(region: str, before: str) -> bool:
+    """True when the word just before the body part names the other side of a sided region:
+    "my right knee" can't be left_knee. Only the one word before counts, so "my knee hurts
+    right now" still matches."""
+    side = region.split("_", 1)[0]
+    if side not in SIDES:
+        return False
+    words = before.split()
+    return bool(words) and words[-1] in SIDES and words[-1] != side
+
+
 def _region_positions(text: str) -> dict[str, int]:
     """Region -> where it was first said. A matched phrase is blanked out so shorter phrases
     inside it ("back" in "upper back") can't match again. A plural "s" also matches."""
     hits: dict[str, int] = {}
+    original = text
     for phrase, region in _phrases():
         for m in re.finditer(rf"\b{re.escape(phrase)}s?\b", text):
-            hits[region] = min(hits.get(region, m.start()), m.start())
+            if not _wrong_side(region, original[: m.start()]):
+                hits[region] = min(hits.get(region, m.start()), m.start())
             text = text[: m.start()] + " " * (m.end() - m.start()) + text[m.end() :]
     return hits
 

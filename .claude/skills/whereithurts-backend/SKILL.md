@@ -55,7 +55,7 @@ backend/tests/     pytest; conftest.py gives `client` with transcription off
 | Method | Path | In | Out |
 |---|---|---|---|
 | GET | `/api/health` | – | `{status, transcription: "ok" \| "off"}` |
-| POST | `/api/extract` | `{text, speaker?: "doctor" \| "patient"}` | `{regions, path, follow_up, corrected_text, source: "llm" \| "keywords"}` |
+| POST | `/api/extract` | `{text, speaker?: "pt" \| "patient"}` | `{regions, path, follow_up, corrected_text, source: "llm" \| "keywords"}` |
 | POST | `/api/transcribe` | multipart `audio`, `speakers?` (1–6, 2 for a visit), `hints?` (JSON list) | `{model, language, duration_ms, processing_ms, diarize_ms, speakers, lines[{start_ms, end_ms, speaker, text}]}` |
 
 - **PT vocabulary:** `app/data/pt_terms.csv` lists muscles, joints and movements, each with its region and common speech-to-text mishearings ("rotator cup" → "rotator cuff"). The keyword fallback corrects mishearings and maps terms to regions. `corrected_text` is the fixed sentence, or `null` when nothing changed. Show it alongside the original, never instead of it. The Claude prompt should include `vocabulary.terms()`. To add a word, add a CSV row (the region must be in `REGION_IDS`; mishearings must never be ordinary words), then run the tests.

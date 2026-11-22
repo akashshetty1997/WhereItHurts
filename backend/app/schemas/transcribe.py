@@ -4,7 +4,7 @@ from pydantic import BaseModel
 class Line(BaseModel):
     start_ms: int
     end_ms: int
-    # "Speaker 1" speaks first; the frontend maps speakers to doctor/patient.
+    # "Speaker 1" speaks first; the frontend maps speakers to pt/patient.
     speaker: str | None
     text: str
 
