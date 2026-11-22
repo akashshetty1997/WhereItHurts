@@ -38,7 +38,7 @@ export default function App() {
           patient={patient}
           onPatientChange={canSwitchBody ? setPatient : null}
         />
-        <main className="relative min-h-0 bg-navy-deep">
+        <main className="dark relative min-h-0 bg-stage">
           <BodyScene key={patient} patient={patient} onRegionClick={setSelected} mode={mode} />
         </main>
         <ConversationPanel visit={visit} mode={mode} selected={selected} missed={missed} />

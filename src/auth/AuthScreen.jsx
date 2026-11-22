@@ -1,5 +1,6 @@
 // Log in / Register. Accounts live in the backend (POST /api/auth/register and /login).
 import { useState } from 'react'
+import ThemeMenu from './ThemeMenu'
 import { PASSWORD_MIN_CHARS, ROLES, login, register } from './authApi'
 
 // Which 3D patient the app shows for this account (backend: constants.GENDERS).
@@ -38,9 +39,10 @@ export default function AuthScreen({ onLoggedIn, testMode, onTestModeChange }) {
 
   return (
     <main className="auth">
+      <ThemeMenu className="auth-theme" />
       <form className="auth-card" onSubmit={submit}>
         <h1>WhereItHurts</h1>
-        <p className="auth-tagline">Show where it hurts. Leave with nothing unsaid.</p>
+        <p className="auth-tagline">Show where it hurts. Say what it feels like.</p>
 
         <div className="auth-tabs" role="tablist">
           <button type="button" role="tab" aria-selected={mode === 'login'} onClick={() => switchTo('login')}>
@@ -110,7 +112,11 @@ export default function AuthScreen({ onLoggedIn, testMode, onTestModeChange }) {
           </span>
         </label>
 
-        {error && <div className="card warn">{error}</div>}
+        {error && (
+          <p role="alert" className="auth-error">
+            {error}
+          </p>
+        )}
 
         <button className="auth-submit" type="submit" disabled={busy}>
           {busy ? 'Please wait…' : mode === 'register' ? 'Create Account' : 'Log In'}

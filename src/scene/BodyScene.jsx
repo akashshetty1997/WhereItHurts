@@ -33,7 +33,7 @@ import './scene.css'
 const HDRI_URL = '/hdri/studio_small_08_1k.hdr'
 
 // Used when the visit JSON has no color for a speaker (v1 mock says "doctor", v2 says "pt").
-const SPEAKER_COLORS = { pt: '#4FC3F7', doctor: '#4FC3F7', patient: '#FFB74D' }
+const SPEAKER_COLORS = { pt: '#4FC3F7', doctor: '#4FC3F7', patient: '#F78FB3' }
 const ACCENT = '#7fd6ff'
 
 // Glow envelope, in seconds: quick rise, then a slow fade.
@@ -43,7 +43,7 @@ const GLOW_PEAK = 1.3
 
 // Rings on a region's edge: selected (steady), listening (pulsing), hovered (faint).
 const RING_SELECTED = { color: '#ffffff', level: 0.75 }
-const RING_LISTENING = { color: '#FFB74D', level: 1.1 }
+const RING_LISTENING = { color: '#F78FB3', level: 1.1 }
 const RING_HOVER = { color: '#ffffff', level: 0.35 }
 // End of visit: marked pain nobody talked about glows amber on the body (plan D8).
 const FLAG_COLOR = new THREE.Color('#ffb300')
@@ -117,16 +117,16 @@ const CLOSE_UP_THETA = {
 }
 const CLOSE_UP_PHI = 1.38 // a little above eye level
 
-// Studio backdrop: deep navy, a little lighter behind the patient.
+// Studio backdrop: neutral near-black (the stage is dark in both appearances), lighter behind the patient.
 function makeBackground() {
   const size = 512
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = size
   const ctx = canvas.getContext('2d')
   const g = ctx.createRadialGradient(size / 2, size * 0.42, 0, size / 2, size / 2, size * 0.8)
-  g.addColorStop(0, '#22385a')
-  g.addColorStop(0.55, '#12223a')
-  g.addColorStop(1, '#0a1424')
+  g.addColorStop(0, '#2a2a2a')
+  g.addColorStop(0.55, '#161616')
+  g.addColorStop(1, '#0a0a0a')
   ctx.fillStyle = g
   ctx.fillRect(0, 0, size, size)
   const texture = new THREE.CanvasTexture(canvas)
