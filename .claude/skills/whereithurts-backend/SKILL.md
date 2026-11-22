@@ -22,7 +22,9 @@ backend/app/
   schemas/         Pydantic request/response models, one file per feature
   services/        the logic
     accounts.py    demo accounts: SQLite at settings.users_db_path, scrypt passwords, session tokens
-    extraction.py  sentence -> regions/path/follow_up: LLM (stub) then keyword fallback
+    extraction.py  sentence -> regions/path/rating/movement/pain_type: fast (keywords) and smart (Claude) passes
+    llm/           Claude for the smart pass: prompt.py (shared prompt + JSON schema), claude_code.py
+                   (`claude -p`, no API key), anthropic_api.py (SDK + key). Pick with LLM_PROVIDER
     keywords.py    keyword fallback (corrects with the PT vocabulary first)
     vocabulary.py  loads data/pt_terms.csv: correct(), region_phrases(), terms()
   data/pt_terms.csv  PT vocabulary: term, region, common mishearings. Add words here, not in code.
@@ -55,16 +57,18 @@ backend/tests/     pytest; conftest.py gives `client` with transcription off
 
 | Method | Path | In | Out |
 |---|---|---|---|
-| GET | `/api/health` | – | `{status, transcription: "ok" \| "off"}` |
+| GET | `/api/health` | – | `{status, transcription: "ok" \| "off", llm: "claude_code" \| "api" \| "off"}` |
 | POST | `/api/auth/register` | `{name, email, password (8+), role: "patient" \| "pt"}` | 201 `{token, user}`; 409 if the email exists |
 | POST | `/api/auth/login` | `{email, password}` | `{token, user}`; 401 "Wrong email or password" |
 | GET | `/api/auth/me` | header `Authorization: Bearer <token>` | `{id, name, email, role}`; 401 if not logged in |
 | POST | `/api/auth/logout` | same header | 204 |
-| POST | `/api/extract` | `{text, speaker?: "pt" \| "patient"}` | `{regions, path, follow_up, corrected_text, source: "llm" \| "keywords"}` |
+| POST | `/api/extract` | `{text, speaker?: "pt" \| "patient", context?, region?}` | instant, keywords: `{regions, path, follow_up, corrected_text, rating, movement, pain_type, source: "keywords"}` |
+| POST | `/api/extract/smart` | same | ~3–4 s, Claude merged on top of keywords, `source: "llm"`; 503 when Claude isn't available (keep the instant answer) |
 | POST | `/api/transcribe` | multipart `audio`, `speakers?` (1–6, 2 for a visit), `hints?` (JSON list) | `{model, language, duration_ms, processing_ms, diarize_ms, speakers, lines[{start_ms, end_ms, speaker, text}]}` |
 
 - **PT vocabulary:** `app/data/pt_terms.csv` lists muscles, joints and movements, each with its region and common speech-to-text mishearings ("rotator cup" → "rotator cuff"). The keyword fallback corrects mishearings and maps terms to regions. `corrected_text` is the fixed sentence, or `null` when nothing changed. Show it alongside the original, never instead of it. The Claude prompt should include `vocabulary.terms()`. To add a word, add a CSV row (the region must be in `REGION_IDS`; mishearings must never be ordinary words), then run the tests.
-- **Extract:** the Claude call is a TODO in `services/extraction.py::_extract_with_llm`. Return `None` there on any failure and the keyword fallback answers. Use `constants.LLM_MODEL`, `LLM_TIMEOUT_S` and `LLM_MAX_TOKENS`. Before writing it, load the `claude-api` skill.
+- **Extract, two passes:** the frontend calls `/api/extract` first and lights the body from it (instant), then `/api/extract/smart` in the background and updates the line when it answers. Send `context` (the previous line) so "About a five." gets its rating, and `region` for voice intake (the tapped region). The smart pass adds movements, ratings in context, pain type and misheard-word fixes; keyword regions are kept and Claude's are added.
+- **Which Claude:** `LLM_PROVIDER` in `backend/.env`: `claude_code` (default, runs `claude -p` with this machine's Claude Code login, no API key; tools, MCP, settings and CLAUDE.md are all switched off for that run), `api` (Anthropic SDK, needs `ANTHROPIC_API_KEY`), or `off`. Both use the same prompt and schema in `services/llm/prompt.py`, so switching changes nothing else. Change extraction behaviour in `prompt.py`. Tests never call a real Claude (`tests/conftest.py` sets `LLM_PROVIDER=off`; `tests/test_llm.py` uses a fake `claude` script).
 - **Accounts:** demo-only login so the app knows who's the patient and who's the PT. To require a login on an endpoint, add a `user: CurrentUserDep` parameter. The extract and transcribe endpoints deliberately don't require one, so the demo never fails on auth. The frontend side is `src/auth/` (`useUser()` gives `{ user, logout }`).
 - **Transcribe:** `"Speaker 1"` is whoever speaks first. The frontend maps speakers to doctor/patient. It returns 503 when the models aren't loaded.
 

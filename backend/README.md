@@ -2,7 +2,8 @@
 
 FastAPI service for the two things the browser can't do on its own:
 
-- `POST /api/extract`: one spoken sentence → the body regions it mentions, a pain path, and any follow-up. It uses Claude when `ANTHROPIC_API_KEY` is set (the call is still a TODO in `app/services/extraction.py`), and the keyword fallback otherwise.
+- `POST /api/extract`: one spoken sentence → body regions, pain path, rating, pain type and follow-up, instantly, from keywords and the PT vocabulary.
+- `POST /api/extract/smart`: the same sentence read by Claude (~3–4 s): adds movements, ratings with context, and fixes misheard words. Uses your Claude Code login by default (`LLM_PROVIDER=claude_code`, no API key); set `LLM_PROVIDER=api` and `ANTHROPIC_API_KEY` in `.env` to use the API instead. 503 when Claude isn't available.
 - `POST /api/transcribe`: a finished visit recording → transcript lines labelled "Speaker 1", "Speaker 2", with timestamps (speech-to-text plus speaker diarization, all on CPU, nothing leaves the machine).
 - `GET /api/health`: `{status, transcription: ok|off}`.
 - `/api/auth/register`, `/login`, `/me`, `/logout`: demo accounts (patient or PT). SQLite in `backend/data/users.db` (gitignored), passwords hashed with scrypt. Demo only: never enter real health information.

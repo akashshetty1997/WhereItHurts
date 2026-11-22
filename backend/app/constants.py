@@ -30,12 +30,22 @@ SPEAKER_ROLES = ("pt", "patient")  # pt = the physical therapist
 SIDES = ("left", "right")
 MAX_SENTENCE_CHARS = 1000
 
-# --- LLM extraction (sentence -> regions, path, follow-up) ----------------------------------
+# --- LLM extraction (sentence -> regions, path, rating, movement, pain type) ---------------
 
-# Fast model: the whole round trip has to fit the ~1.5 s budget in docs/PLAN.md.
-LLM_MODEL = "claude-haiku-5-5"
-LLM_TIMEOUT_S = 2.0
-LLM_MAX_TOKENS = 200
+# Which Claude runs the extraction (settings.llm_provider):
+LLM_PROVIDER_CLAUDE_CODE = "claude_code"  # `claude -p` with the Claude Code login, no API key
+LLM_PROVIDER_API = "api"  # Anthropic SDK with ANTHROPIC_API_KEY
+LLM_PROVIDER_OFF = "off"  # keywords only
+LLM_PROVIDERS = (LLM_PROVIDER_CLAUDE_CODE, LLM_PROVIDER_API, LLM_PROVIDER_OFF)
+
+# Fast, cheap model: extraction is high-volume and latency-sensitive.
+LLM_MODEL = "claude-haiku-5-5"  # API model id
+CLAUDE_CODE_MODEL = "haiku"  # the same model, as Claude Code names it
+LLM_EFFORT = "low"
+LLM_MAX_TOKENS = 2048  # room for thinking plus the small JSON answer
+# The smart pass runs after the instant keyword answer, so it can take a few seconds.
+LLM_TIMEOUT_S = 15.0
+CLAUDE_CLI = "claude"
 
 EXTRACT_SOURCE_LLM = "llm"
 EXTRACT_SOURCE_KEYWORDS = "keywords"
@@ -77,6 +87,39 @@ MOVEMENT_WORDS = (
     "travels",
 )
 FOLLOW_UP_WORDS = ("follow-up", "follow up", "come back", "schedule")
+# Body words inside a movement instruction aren't a mention of that body part:
+# "turn your head to the left" tests the neck, it doesn't talk about the head.
+NOT_A_MENTION = (
+    "turn your head",
+    "turning your head",
+    "tilt your head",
+    "nod your head",
+    "look over your shoulder",
+    "shrug your shoulders",
+)
+# Words that name the feeling -> one of PAIN_TYPES (first match in the sentence wins).
+PAIN_TYPE_WORDS: dict[str, tuple[str, ...]] = {
+    "burning": ("burning", "burns", "burn", "hot", "on fire"),
+    "sharp": ("sharp", "stabbing", "shooting", "stabs", "pins and needles"),
+    "aching": ("aching", "aches", "ache", "achy", "dull", "throbbing", "sore"),
+}
+# Spoken pain ratings: "five out of ten", "about a five", "maybe a 2".
+RATING_MIN = 0
+RATING_MAX = 10
+NUMBER_WORDS = (
+    "zero",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+)
+RATING_LEAD_WORDS = ("about", "maybe", "around", "like", "probably", "roughly", "a solid")
 
 # --- PT vocabulary ---------------------------------------------------------------------------
 

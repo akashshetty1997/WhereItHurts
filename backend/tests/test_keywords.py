@@ -67,3 +67,43 @@ def test_upper_back_travels_to_lower_back() -> None:
 )
 def test_the_other_side_is_not_counted(text: str, regions: list[str]) -> None:
     assert extract_keywords(text).regions == regions
+
+
+@pytest.mark.parametrize(
+    ("text", "rating"),
+    [
+        ("About a five.", 5),
+        ("Oh, the shoulder feels better. Maybe a two.", 2),
+        ("It's 7 out of 10", 7),
+        ("about 4/10 today", 4),
+        ("I have one question", None),
+        ("My shoulder aches", None),
+    ],
+)
+def test_spoken_ratings(text: str, rating: int | None) -> None:
+    assert extract_keywords(text).rating == rating
+
+
+@pytest.mark.parametrize(
+    ("text", "pain_type"),
+    [
+        ("It's a dull ache", "aching"),
+        ("a sharp stabbing pain", "sharp"),
+        ("it burns when I lift", "burning"),
+        ("My knee hurts", None),
+    ],
+)
+def test_pain_words(text: str, pain_type: str | None) -> None:
+    assert extract_keywords(text).pain_type == pain_type
+
+
+@pytest.mark.parametrize(
+    ("text", "regions"),
+    [
+        ("Let me check your neck. Slowly turn your head to the left.", ["neck"]),
+        ("My head hurts when I turn my head", ["head"]),
+        ("Shrug your shoulders for me", []),
+    ],
+)
+def test_movement_instructions_are_not_mentions(text: str, regions: list[str]) -> None:
+    assert extract_keywords(text).regions == regions

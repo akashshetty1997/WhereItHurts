@@ -7,7 +7,16 @@ Mishearings are corrected first with the PT vocabulary (services/vocabulary.py),
 import re
 from functools import lru_cache
 
-from app.constants import FOLLOW_UP_WORDS, MOVEMENT_WORDS, SIDES
+from app.constants import (
+    FOLLOW_UP_WORDS,
+    MOVEMENT_WORDS,
+    NOT_A_MENTION,
+    NUMBER_WORDS,
+    PAIN_TYPE_WORDS,
+    RATING_LEAD_WORDS,
+    RATING_MAX,
+    SIDES,
+)
 from app.schemas.extract import Extraction
 from app.services import vocabulary
 
@@ -43,6 +52,8 @@ def _region_positions(text: str) -> dict[str, int]:
     """Region -> where it was first said. A matched phrase is blanked out so shorter phrases
     inside it ("back" in "upper back") can't match again. A plural "s" also matches."""
     hits: dict[str, int] = {}
+    for phrase in NOT_A_MENTION:  # same length, so positions stay put
+        text = re.sub(rf"\b{re.escape(phrase)}\b", lambda m: " " * len(m.group(0)), text)
     original = text
     for phrase, region in _phrases():
         for m in re.finditer(rf"\b{re.escape(phrase)}s?\b", text):
@@ -50,6 +61,35 @@ def _region_positions(text: str) -> dict[str, int]:
                 hits[region] = min(hits.get(region, m.start()), m.start())
             text = text[: m.start()] + " " * (m.end() - m.start()) + text[m.end() :]
     return hits
+
+
+_NUMBER = rf"(\d{{1,2}}|{'|'.join(NUMBER_WORDS)})"
+_RATING_PATTERNS = (
+    re.compile(rf"\b{_NUMBER}\s*(?:out of|/)\s*(?:10|ten)\b"),
+    re.compile(rf"\b(?:{'|'.join(RATING_LEAD_WORDS)})\s+(?:a\s+|an\s+)?{_NUMBER}\b"),
+    re.compile(rf"\b(?:it's|its|is)\s+an?\s+{_NUMBER}\b"),
+)
+
+
+def _rating(lower: str) -> int | None:
+    """A spoken pain number: "five out of ten", "about a five", "maybe a 2", "it's a 7"."""
+    for pattern in _RATING_PATTERNS:
+        if m := pattern.search(lower):
+            word = m.group(1)
+            value = int(word) if word.isdigit() else NUMBER_WORDS.index(word)
+            if value <= RATING_MAX:
+                return value
+    return None
+
+
+def _pain_type(lower: str) -> str | None:
+    """The first feeling word said: "dull" -> aching, "stabbing" -> sharp."""
+    hits = {
+        kind: at
+        for kind, words in PAIN_TYPE_WORDS.items()
+        if (at := _first_match(lower, words)) is not None
+    }
+    return min(hits, key=hits.get) if hits else None
 
 
 def extract_keywords(text: str) -> Extraction:
@@ -64,4 +104,6 @@ def extract_keywords(text: str) -> Extraction:
         path=regions if moving else [],
         follow_up=follow_up,
         corrected_text=corrected if corrected != text else None,
+        rating=_rating(lower),
+        pain_type=_pain_type(lower),
     )
