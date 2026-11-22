@@ -15,4 +15,6 @@
 .auth-roles label.on { border-color: #ffb74d; color: #ffb74d; }
 .auth-submit { background: #4fc3f7; color: #0d1117; border-color: #4fc3f7; font-weight: 600; }
 .auth-note { margin: 0; font-size: 0.75rem; color: #6e7681; text-align: center; }
-
+.auth-card label.auth-test-mode { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.6rem 0.7rem; border: 1px dashed #30363d; border-radius: 8px; color: #e6edf3; cursor: pointer; }
+.auth-test-mode input { margin-top: 0.2rem; accent-color: #4fc3f7; }
+.auth-test-mode span { display: grid; gap: 0.15rem; }

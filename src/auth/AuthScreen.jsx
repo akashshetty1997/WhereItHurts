@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { PASSWORD_MIN_CHARS, ROLES, login, register } from './authApi'
 
-export default function AuthScreen({ onLoggedIn }) {
+export default function AuthScreen({ onLoggedIn, testMode, onTestModeChange }) {
   const [mode, setMode] = useState('login') // login | register
   const [fields, setFields] = useState({ name: '', email: '', password: '', role: 'patient' })
   const [error, setError] = useState(null)
@@ -78,6 +78,14 @@ export default function AuthScreen({ onLoggedIn }) {
             required
           />
           {mode === 'register' && <small>At least {PASSWORD_MIN_CHARS} characters</small>}
+        </label>
+
+        <label className="auth-test-mode">
+          <input type="checkbox" checked={testMode} onChange={(e) => onTestModeChange(e.target.checked)} />
+          <span>
+            Testing mode
+            <small>Act as both the patient and the PT (both talk buttons)</small>
+          </span>
         </label>
 
         {error && <div className="card warn">{error}</div>}

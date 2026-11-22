@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { useUser } from './userContext'
 
 export default function UserMenu() {
-  const { user, logout } = useUser()
+  const { user, logout, testMode } = useUser()
   if (!user) return null
   const isPt = user.role === 'pt'
   return (
@@ -14,6 +14,9 @@ export default function UserMenu() {
         <span className={cn('ml-2 rounded-full px-2 py-0.5 text-xs', isPt ? 'bg-sky-400/15 text-sky-300' : 'bg-amber-400/15 text-amber-300')}>
           {isPt ? 'PT' : 'Patient'}
         </span>
+        {testMode && (
+          <span className="ml-1 rounded-full bg-secondary px-2 py-0.5 text-xs text-muted-foreground">Test mode</span>
+        )}
       </span>
       <Button variant="ghost" size="sm" onClick={logout}>
         Log out
