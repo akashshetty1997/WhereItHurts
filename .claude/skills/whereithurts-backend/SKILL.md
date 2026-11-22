@@ -18,9 +18,10 @@ backend/app/
                    ANTHROPIC_API_KEY, TRANSCRIBE_ENABLED, TRANSCRIBE_ENGINE, MODELS_DIR, TRANSCRIBE_TMP_DIR
   api/router.py    registers every route module, once
   api/deps.py      SettingsDep, TranscriptionDep, AccountsDep, CurrentUserDep (needs a Bearer token)
-  api/routes/      health.py, auth.py, extract.py, transcribe.py: thin HTTP handlers
+  api/routes/      health.py, auth.py, extract.py, transcribe.py, live.py (WebSocket): thin handlers
   schemas/         Pydantic request/response models, one file per feature
   services/        the logic
+    live.py        live listening: Segmenter (VAD, sentence ends) + LiveSession (enroll voices, match speaker)
     accounts.py    demo accounts: SQLite at settings.users_db_path, scrypt passwords, session tokens
     extraction.py  sentence -> regions/path/rating/movement/pain_type: fast (keywords) and smart (Claude) passes
     llm/           Claude for the smart pass: prompt.py (shared prompt + JSON schema), claude_code.py
@@ -65,18 +66,20 @@ backend/tests/     pytest; conftest.py gives `client` with transcription off
 | POST | `/api/extract` | `{text, speaker?: "pt" \| "patient", context?, region?}` | instant, keywords: `{regions, path, follow_up, corrected_text, rating, movement, pain_type, source: "keywords"}` |
 | POST | `/api/extract/smart` | same | ~3–4 s, Claude merged on top of keywords, `source: "llm"`; 503 when Claude isn't available (keep the instant answer) |
 | POST | `/api/transcribe` | multipart `audio`, `speakers?` (1–6, 2 for a visit), `hints?` (JSON list) | `{model, language, duration_ms, processing_ms, diarize_ms, speakers, lines[{start_ms, end_ms, speaker, text}]}` |
+| WS | `/api/live` | binary 16 kHz mono 16-bit PCM + `{type:"enroll", speaker}` / `{type:"flush"}` | `ready`, `enrolling`, `enrolled {ready}`, `enroll_retry`, `segment {segment, extraction, sure}`, `error {code}` (protocol in `routes/live.py`) |
 
 - **PT vocabulary:** `app/data/pt_terms.csv` lists muscles, joints and movements, each with its region and common speech-to-text mishearings ("rotator cup" → "rotator cuff"). The keyword fallback corrects mishearings and maps terms to regions. `corrected_text` is the fixed sentence, or `null` when nothing changed. Show it alongside the original, never instead of it. The Claude prompt should include `vocabulary.terms()`. To add a word, add a CSV row (the region must be in `REGION_IDS`; mishearings must never be ordinary words), then run the tests.
 - **Extract, two passes:** the frontend calls `/api/extract` first and lights the body from it (instant), then `/api/extract/smart` in the background and updates the line when it answers. Send `context` (the previous line) so "About a five." gets its rating, and `region` for voice intake (the tapped region). The smart pass adds movements, ratings in context, pain type and misheard-word fixes; keyword regions are kept and Claude's are added.
 - **Which Claude:** `LLM_PROVIDER` in `backend/.env`: `claude_code` (default, runs `claude -p` with this machine's Claude Code login, no API key; tools, MCP, settings and CLAUDE.md are all switched off for that run), `api` (Anthropic SDK, needs `ANTHROPIC_API_KEY`), or `off`. Both use the same prompt and schema in `services/llm/prompt.py`, so switching changes nothing else. Change extraction behaviour in `prompt.py`. Tests never call a real Claude (`tests/conftest.py` sets `LLM_PROVIDER=off`; `tests/test_llm.py` uses a fake `claude` script).
 - **Accounts:** demo-only login so the app knows who's the patient and who's the PT. To require a login on an endpoint, add a `user: CurrentUserDep` parameter. The extract and transcribe endpoints deliberately don't require one, so the demo never fails on auth. The frontend side is `src/auth/` (`useUser()` gives `{ user, logout }`).
+- **Live listening (`/api/live`):** the visit's default. The frontend (`src/panels/liveVoice.js`, `LiveListen.jsx`) streams the mic; the PT and the patient each say one sentence to enroll, then every sentence comes back with its speaker (closer voice print) and keyword regions, about 1 s after it ends. Needs the speech models and the `websockets` package. Speech models use `MODEL_THREADS` (4): more threads made them ~4x slower. Run uvicorn with `--reload-dir app`; watching the whole folder (with `.venv` and `models`) burns a CPU core.
 - **Transcribe:** `"Speaker 1"` is whoever speaks first. The frontend maps speakers to doctor/patient. It returns 503 when the models aren't loaded.
 
 ## Commands (run in `backend/`)
 
 ```bash
 uv sync
-uv run uvicorn app.main:app --reload --port 8000 --no-access-log   # always --no-access-log
+uv run uvicorn app.main:app --reload --reload-dir app --port 8000 --no-access-log   # always --no-access-log
 uv run pytest
 uv run ruff check . && uv run ruff format .
 ```

@@ -12,6 +12,7 @@ dependencies = [
     "numpy>=2",
     "sherpa-onnx>=2.0.1",
     "faster-whisper>=1.1",
+    "websockets>=17.4",
 ]
 
 [dependency-groups]

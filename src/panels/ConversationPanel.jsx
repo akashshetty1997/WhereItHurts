@@ -15,7 +15,7 @@ export default function ConversationPanel({ visit, mode, selected, missed }) {
 
   return (
     <aside className="flex min-h-0 flex-col gap-5 overflow-y-auto border-l border-border p-5">
-      {mode === 'visit' && <LiveSpeech />}
+      {(mode === 'paint' || mode === 'visit') && <LiveSpeech mode={mode} />}
       {mode === 'visit' && <MovementCheck visit={visit} />}
 
       {mode === 'ended' && (

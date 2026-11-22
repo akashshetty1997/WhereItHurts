@@ -103,6 +103,21 @@ PAIN_TYPE_WORDS: dict[str, tuple[str, ...]] = {
     "sharp": ("sharp", "stabbing", "shooting", "stabs", "pins and needles"),
     "aching": ("aching", "aches", "ache", "achy", "dull", "throbbing", "sore"),
 }
+# The patient's goal during prep ("I want to be able to put plates on the top shelf").
+# The words after the longest matching lead become the goal.
+GOAL_LEADS = (
+    "i want to be able to",
+    "i'd like to be able to",
+    "i would like to be able to",
+    "i wish i could",
+    "my goal is to",
+    "my goal is",
+    "i want to",
+    "i'd like to",
+    "i would like to",
+    "i'd love to",
+    "i want to get back to",
+)
 # Spoken pain ratings: "five out of ten", "about a five", "maybe a 2".
 RATING_MIN = 0
 RATING_MAX = 10
@@ -155,9 +170,26 @@ MAX_HINTS = 100
 MAX_SPEAKERS = 6
 DEFAULT_SPEAKERS = 2
 
+# --- Live listening (/api/live WebSocket) ----------------------------------------------------
+
+# The browser streams 16 kHz mono 16-bit PCM. A pause this long ends a sentence.
+LIVE_MIN_SILENCE_S = 0.6
+# A sentence longer than this is cut, so one long turn still shows up in pieces.
+LIVE_MAX_SPEECH_S = 15.0
+# Shorter sounds (a cough, "mm") are ignored.
+LIVE_MIN_SPEECH_S = 0.4
+# Enrollment needs a real sentence: shorter voice prints are unreliable (see MIN_CLUSTER_S).
+LIVE_MIN_ENROLL_S = 1.0
+# Cosine similarity below which the match is reported as unsure (still the closer voice).
+LIVE_SURE_SIMILARITY = 0.5
+LIVE_VAD_BUFFER_S = 30
+LIVE_MODE_PREP = "prep"  # /api/live?mode=prep: before the visit, only the patient talks
+
 # --- Speech-to-text models (files live in MODELS_DIR, see backend/README.md) -----------------
 
 ENGINE_PARAKEET = "parakeet"
+# Default CPU threads for the speech models (settings.model_threads overrides it).
+MODEL_THREADS = 4
 ENGINE_WHISPER = "whisper"
 PARAKEET_MODEL_DIR = "sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8"
 VAD_MODEL_FILE = "silero_vad.onnx"

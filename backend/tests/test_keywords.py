@@ -107,3 +107,16 @@ def test_pain_words(text: str, pain_type: str | None) -> None:
 )
 def test_movement_instructions_are_not_mentions(text: str, regions: list[str]) -> None:
     assert extract_keywords(text).regions == regions
+
+
+@pytest.mark.parametrize(
+    ("text", "goal"),
+    [
+        ("I want to be able to put plates on the top shelf.", "Put plates on the top shelf"),
+        ("My goal is to play with my kids again", "Play with my kids again"),
+        ("I'd like to sleep through the night", "Sleep through the night"),
+        ("My right shoulder aches, about a five.", None),
+    ],
+)
+def test_goals(text: str, goal: str | None) -> None:
+    assert extract_keywords(text).goal == goal

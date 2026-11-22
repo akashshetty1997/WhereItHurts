@@ -19,7 +19,7 @@ Needs Python 3.12, [uv](https://docs.astral.sh/uv/) and ffmpeg (`brew install ff
 ```bash
 cp .env.example .env
 uv sync
-uv run uvicorn app.main:app --reload --port 8000 --no-access-log
+uv run uvicorn app.main:app --reload --reload-dir app --port 8000 --no-access-log
 uv run pytest                     # tests (no models needed)
 uv run ruff check . && uv run ruff format .
 ```
