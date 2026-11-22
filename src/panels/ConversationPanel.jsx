@@ -3,6 +3,7 @@ import { regionLabel, REGIONS } from '@/regions'
 import { toTen } from '@/scene/intensity'
 import { SPEAKER_NAMES, SPEAKER_TEXT } from '@/lib/visitDisplay'
 import { cn } from '@/lib/utils'
+import LiveSpeech from './LiveSpeech'
 
 // Right panel: the conversation, what was said about a tapped region, and the end-of-visit check.
 export default function ConversationPanel({ visit, mode, selected, missed }) {
@@ -10,6 +11,8 @@ export default function ConversationPanel({ visit, mode, selected, missed }) {
 
   return (
     <aside className="flex min-h-0 flex-col gap-5 border-l border-border p-5">
+      {mode === 'visit' && <LiveSpeech />}
+
       {mode === 'ended' && (
         <section className="space-y-2" aria-label="End of visit check">
           <h2 className="text-lg font-bold">Did everything come up?</h2>

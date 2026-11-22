@@ -52,3 +52,18 @@ def test_spine_regions(text: str, regions: list[str]) -> None:
 def test_upper_back_travels_to_lower_back() -> None:
     result = extract_keywords("It starts in my upper back and goes down to my lower back.")
     assert result.path == ["upper_back", "lower_back"]
+
+
+@pytest.mark.parametrize(
+    ("text", "regions"),
+    [
+        ("My right knee hurts", []),  # we only have a left knee
+        ("My left shoulder is sore", []),  # we only have a right shoulder
+        ("My right thigh hurts when I sit", []),
+        ("My left knee hurts", ["left_knee"]),
+        ("My knee hurts right now", ["left_knee"]),  # "right" isn't next to the body part
+        ("My right shoulder and my right knee", ["right_shoulder"]),
+    ],
+)
+def test_the_other_side_is_not_counted(text: str, regions: list[str]) -> None:
+    assert extract_keywords(text).regions == regions
