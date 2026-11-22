@@ -6,10 +6,14 @@ Hackathon app (Sundai Hack 150): before a physical therapy (PT) visit the patien
 
 | What | Where |
 |---|---|
-| Plan, data model, role-play script, timeline | `docs/PLAN.md` |
+| Plan, data model, timeline | `docs/PLAN.md` |
+| Demo script, pitch and Q&A | `docs/DEMO_SCRIPT.md`, `docs/PITCH.md` |
+| Anatomy + reports plan (PR #26) | `docs/ANATOMY_AND_REPORTS_PLAN.md` |
 | UI design rules (any change to how the frontend looks) | the `apple-design` skill (personal install, see below) |
 | Frontend (Vite + React + Three.js) | repo root: `src/`, `vite.config.js` |
-| Visit state contract | `src/mockVisit.js`, `src/visitStore.js` |
+| Visit state (saved in the browser; New Visit clears it) | `src/visitStore.js` (shape: `src/mockVisit.js`) |
+| Voice: Record Your Prep, Record the Visit, smart pass | `src/panels/PrepListen.jsx`, `LiveListen.jsx`, `liveVoice.js`, `smartPass.js`; backend `/api/live`, `/api/extract(/smart)` |
+| Movement check, summary | `src/panels/movementLog.js`, `MovementCheck.jsx`, `VisitWrapUp.jsx` |
 | Region ids (keep in sync with `backend/app/constants.py`) | `src/regions.js` |
 | Backend (FastAPI): extract and transcribe APIs | `backend/`; load the `whereithurts-backend` skill first |
 | Three.js how-tos | `.claude/skills/threejs-*` |
@@ -18,7 +22,7 @@ Hackathon app (Sundai Hack 150): before a physical therapy (PT) visit the patien
 
 ```bash
 npm install && npm run dev                                                  # frontend, :5173
-cd backend && uv sync && uv run uvicorn app.main:app --reload --reload-dir app --port 8000 --no-access-log   # backend, :8000
+cd backend && uv sync && scripts/get_models.sh && uv run uvicorn app.main:app --reload --reload-dir app --port 8000 --no-access-log   # backend, :8000
 ```
 
 The frontend calls the backend as `fetch('/api/...')` through the Vite proxy.

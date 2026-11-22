@@ -26,7 +26,7 @@ function writeToken(token) {
   }
 }
 
-const UNREACHABLE = 'Server not reachable. Is the backend running?'
+export const UNREACHABLE = 'Server not reachable. Is the backend running?'
 
 async function call(path, { body, token } = {}) {
   let res
@@ -56,7 +56,8 @@ function errorMessage(status, data) {
     const field = first.loc?.at(-1)
     return field ? `${field}: ${first.msg.replace(/^Value error, /, '')}` : first.msg
   }
-  return status >= 500 ? UNREACHABLE : `Error ${status}`
+  // 404/405: no backend behind this site (the public frontend-only link), same as unreachable.
+  return status >= 500 || status === 404 || status === 405 ? UNREACHABLE : `Error ${status}`
 }
 
 export async function register(fields) {
@@ -88,3 +89,7 @@ export async function logout() {
   writeToken(null)
   if (token) await call('logout', { body: {}, token }).catch(() => {})
 }
+
+// The public link has no backend, so nobody can log in there. "Try the Demo" uses this local
+// guest instead (a PT, so every screen can be explored). Nothing is sent anywhere.
+export const DEMO_GUEST = { id: 0, name: 'Guest', email: '', role: 'pt', gender: 'male', guest: true }

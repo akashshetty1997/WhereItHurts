@@ -1,45 +1,48 @@
 # WhereItHurts
 
-Paint where it hurts on a 3D body, then a live doctor–patient conversation lights up each body part as it's mentioned. Painted pain nobody talked about stays flagged amber at the end. Communication tool only; it never diagnoses.
+Before a physical therapy visit, the patient marks where it hurts on a 3D body, by tapping or just saying it. During the visit the app listens hands-free, works out who is speaking (PT or patient), and lights up each body part as it's mentioned. At the end, marked pain nobody talked about glows amber, the patient confirms what changed, and the PT gets a one-screen summary. A communication tool only: it never diagnoses.
 
-Full plan: [docs/PLAN.md](docs/PLAN.md)
+- Plan: [docs/PLAN.md](docs/PLAN.md) · Demo script: [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) · Pitch: [docs/PITCH.md](docs/PITCH.md)
 
-## Run
+## Run (demo laptop)
 
-Requires Node 20+.
+Needs Node 20+, Python 3.12, [uv](https://docs.astral.sh/uv/), ffmpeg, and Chrome. Live listening needs the backend and its speech models; the smart pass uses Claude Code (logged in) or an API key.
 
 ```bash
+# frontend
 npm install
-npm run dev      # http://localhost:5173
-npm run build
-```
+npm run dev                                   # http://localhost:5173
 
-### Backend
-
-FastAPI in [backend/](backend/): `POST /api/extract` (sentence → regions, pain path) and `POST /api/transcribe` (recording → speaker-labelled lines). The Vite dev server proxies `/api` to it. Needs Python 3.12, [uv](https://docs.astral.sh/uv/) and ffmpeg.
-
-```bash
+# backend (another terminal)
 cd backend
-cp .env.example .env    # add ANTHROPIC_API_KEY (optional: keywords work without it)
+cp .env.example .env                          # LLM_PROVIDER=claude_code by default; or api + ANTHROPIC_API_KEY
 uv sync
+scripts/get_models.sh                         # once per laptop: speech models, about 520 MB
 uv run uvicorn app.main:app --reload --reload-dir app --port 8000 --no-access-log
+curl localhost:8000/api/health                # {"transcription":"ok","llm":"claude_code"}
 ```
 
-Speech models for `/api/transcribe` are optional; see [backend/README.md](backend/README.md).
+## Public link (frontend only)
 
-## Layout
+`vercel.json` deploys the frontend to Vercel. There's no backend there, so accounts and live listening don't work: the login screen says so and offers **Try the Demo** (a local guest PT) to explore the body, marking, the visit screens and the summary. The full demo runs on the laptop.
 
-| File | Purpose |
+## How it's built
+
+| Where | What |
 | --- | --- |
-| `src/mockVisit.js` | The visit JSON contract every role builds against |
-| `src/visitStore.js` | Visit state: `setPainted`, `addSegment`, `onSegment`, `unmentioned()` |
-| `src/regions.js` | MVP region ids (left/right = patient's side) |
-| `src/scene/BodyScene.jsx` | Three.js scene; placeholder capsule body until the GLB lands |
-| `src/App.jsx` | Legend, transcript, mentions, catch cards |
+| `src/scene/BodyScene.jsx`, `src/shaders/patientMaterial.js` | three.js scene: patient model, pain looks, glows, pain-path pulse, amber flag, camera and view controls |
+| `src/panels/PrepListen.jsx` | **Record Your Prep**: say where it hurts and your goal; keywords first, Claude for free phrasing |
+| `src/panels/LiveListen.jsx`, `liveVoice.js` | **Record the Visit**: mic → WebSocket `/api/live`; voice enrollment, then every line labelled PT / Patient |
+| `src/panels/smartPass.js` | Claude improves each visit line in the background (missed body parts, rating, movement, follow-up) |
+| `src/panels/movementLog.js`, `MovementCheck.jsx` | Movement check (PT names a movement, patient rates before / after) |
+| `src/panels/VisitWrapUp.jsx` | Summary: confirm cards, PT summary |
+| `src/visitStore.js` | The visit state (kept in the browser across a refresh; **New Visit** clears it) |
+| `src/auth/` | Demo accounts (patient / PT), Testing mode, Try the Demo, light / dark |
+| `backend/` | FastAPI: extraction (keywords + Claude), live listening, transcription, accounts. See [backend/README.md](backend/README.md) |
 
-Region ids: `head`, `neck`, `upper_back`, `lower_back`, `left_leg`, `left_knee`, `right_shoulder`. Spine regions show the clinical term too: neck (cervical spine), upper back (thoracic spine), lower back (lumbar spine).
+Region ids: `head`, `neck`, `upper_back`, `lower_back`, `left_leg`, `left_knee`, `right_shoulder` (left / right = the patient's side).
 
-Controls: left-click paints/selects, right-drag rotates, scroll zooms.
+Controls: click a body part to select it, drag to turn, Shift-drag to slide up or down, scroll to zoom. No mouse: the **View Controls** panel, or ← → turn, ↑ ↓ tilt, Shift+↑ ↓ slide, + − zoom, F L B R sides, 0 whole body, ? controls.
 
 ## Credits
 

@@ -7,6 +7,7 @@ import { Mic, Pause, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { visitStore } from '../visitStore'
 import { startLive } from './liveVoice'
+import { addFollowUpFrom, refineLine } from './smartPass'
 
 const STEPS = {
   pt: { step: 'Step 1 of 2', who: 'PT', say: '“Hi, I’m your physical therapist today.”', color: 'text-pt' },
@@ -15,7 +16,7 @@ const STEPS = {
 
 const FAILURES = {
   transcription_off: 'Recording is off on the server (speech models not loaded).',
-  closed: 'Lost the connection to the server.',
+  closed: 'Can’t reach the WhereItHurts server. Live listening runs on the demo laptop (see README).',
   mic: 'The microphone is blocked or missing. Allow it in the address bar.',
 }
 
@@ -27,6 +28,7 @@ export default function LiveListen({ onFail }) {
   const [unsure, setUnsure] = useState(false)
   const live = useRef(null)
   const closing = useRef(false) // End Visit: the connection closing is expected
+  const session = useRef(Date.now().toString(36)) // prefix for this recording's line ids
 
   function enroll(speaker) {
     setPhase(speaker)
@@ -42,8 +44,14 @@ export default function LiveListen({ onFail }) {
       else enroll('patient')
     } else if (event.type === 'segment') {
       // rating / movement feed the movement check (src/panels/movementLog.js).
-      const { rating = null, movement = null } = event.extraction ?? {}
-      visitStore.addSegment({ ...event.segment, rating, movement })
+      const { rating = null, movement = null, follow_up: followUp = null } = event.extraction ?? {}
+      const previous = visitStore.get().segments.at(-1)?.text
+      // Ids from the server restart with each connection; the session stamp keeps them unique
+      // across Resume, Redo voices and a page refresh.
+      const segment = { ...event.segment, id: `${session.current}-${event.segment.id}`, rating, movement }
+      visitStore.addSegment(segment)
+      addFollowUpFrom(segment, followUp)
+      refineLine(segment, previous) // Claude improves the line in the background
       setUnsure(!event.sure)
     } else if (event.type === 'error') onFail(FAILURES[event.code] ?? `Recording error: ${event.code}`)
   }

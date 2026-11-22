@@ -11,6 +11,16 @@ import { visitStore } from '../visitStore'
 let lastRegion = null // the most recent body part anyone mentioned
 let lastRating = null // a pain number the patient said before a movement started
 let counter = 0
+const handled = new Set() // line ids whose movement / rating was already used
+
+// After a page refresh the saved checks are back (src/visitStore.js): continue their numbering.
+function nextId() {
+  if (!counter) {
+    const ids = (visitStore.get().observations ?? []).map((o) => Number(o.id?.split('-')[1]) || 0)
+    counter = Math.max(0, ...ids)
+  }
+  return `obs-${++counter}`
+}
 
 // Safety net when /api/extract returns no movement (its keyword fallback doesn't look for one):
 // a PT instruction like "Slowly turn your head to the left" → "Turn your head to the left".
@@ -38,7 +48,7 @@ const openCheck = () => {
 
 export function startCheck(patch = {}) {
   const check = {
-    id: `obs-${++counter}`,
+    id: nextId(),
     movement: '',
     assessedRegion: null,
     symptomRegion: lastRegion,
@@ -70,6 +80,7 @@ export function onLine(line) {
     movement: line.movement ?? (line.speaker !== 'patient' ? detectMovement(line.text) : null),
   }
   const open = openCheck()
+  if (segment.movement || segment.rating != null) handled.add(line.id)
   if (segment.movement) {
     // The PT named a movement: start a check (or name the open one). The body part the PT
     // mentioned with it is the area assessed.
@@ -96,7 +107,20 @@ export function onLine(line) {
   if (symptom) lastRegion = symptom
 }
 
+// The smart pass (src/panels/smartPass.js) found a movement or a rating the keywords missed.
+// Only the latest line counts (an older one would land in the wrong check), and only once.
+export function onLineUpdate(next, previous) {
+  const latest = visitStore.get().segments.at(-1)
+  if (latest?.id !== next.id || handled.has(next.id)) return
+  const movement = !previous.movement && next.movement ? next.movement : null
+  const rating = previous.rating == null && next.rating != null ? next.rating : null
+  if (movement || rating != null) onLine({ ...next, movement, rating })
+}
+
+// New Visit: forget everything about the last one.
 export function resetMovementCheck() {
   lastRegion = null
   lastRating = null
+  counter = 0
+  handled.clear()
 }

@@ -1,7 +1,7 @@
 // Log in / Register. Accounts live in the backend (POST /api/auth/register and /login).
 import { useState } from 'react'
 import ThemeMenu from './ThemeMenu'
-import { PASSWORD_MIN_CHARS, ROLES, login, register } from './authApi'
+import { DEMO_GUEST, UNREACHABLE, PASSWORD_MIN_CHARS, ROLES, login, register } from './authApi'
 
 // Which 3D patient the app shows for this account (backend: constants.GENDERS).
 const GENDERS = [
@@ -114,8 +114,15 @@ export default function AuthScreen({ onLoggedIn, testMode, onTestModeChange }) {
 
         {error && (
           <p role="alert" className="auth-error">
-            {error}
+            {error === UNREACHABLE
+              ? 'The WhereItHurts server isn’t running here. Live listening and accounts run on the demo laptop.'
+              : error}
           </p>
+        )}
+        {error === UNREACHABLE && (
+          <button type="button" className="auth-submit auth-demo" onClick={() => onLoggedIn(DEMO_GUEST)}>
+            Try the Demo
+          </button>
         )}
 
         <button className="auth-submit" type="submit" disabled={busy}>

@@ -1,4 +1,4 @@
-import { Play, Square, RotateCcw } from 'lucide-react'
+import { FilePlus, Play, Square, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import UserMenu from '@/auth/UserMenu'
@@ -17,8 +17,11 @@ const ACTIONS = {
   ended: { label: 'Back to Marking', icon: RotateCcw, variant: 'secondary' },
 }
 
+// New Visit clears everything, so it asks first (alerts.md: warn before a destructive action).
+const NEW_VISIT_QUESTION = 'Start a new visit? This clears the marks, goal, conversation and summary.'
+
 // Toolbar: app name, the three visit steps in order (current one lit), the next action, account.
-export default function AppHeader({ mode, onAction }) {
+export default function AppHeader({ mode, onAction, onNewVisit }) {
   const current = STEPS.findIndex((s) => s.mode === mode)
   const action = ACTIONS[mode]
   const Icon = action.icon
@@ -58,6 +61,16 @@ export default function AppHeader({ mode, onAction }) {
           <Icon className="size-4" aria-hidden />
           {action.label}
         </Button>
+        {mode === 'ended' && (
+          <Button
+            size="lg"
+            className="h-10 gap-2 px-4 text-base font-bold"
+            onClick={() => window.confirm(NEW_VISIT_QUESTION) && onNewVisit()}
+          >
+            <FilePlus className="size-4" aria-hidden />
+            New Visit
+          </Button>
+        )}
         <UserMenu />
       </div>
     </header>

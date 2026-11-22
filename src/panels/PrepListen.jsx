@@ -18,7 +18,7 @@ const DEFAULT_RATING = 5
 
 const FAILURES = {
   transcription_off: 'Hands-free listening is off on the server.',
-  closed: 'Lost the connection to the server.',
+  closed: 'Can’t reach the WhereItHurts server. Live listening runs on the demo laptop (see README).',
   mic: 'The microphone is blocked or missing. Allow it in the address bar.',
 }
 

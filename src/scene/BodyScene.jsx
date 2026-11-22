@@ -16,7 +16,7 @@ import { visitStore, useVisit, unmentioned } from '../visitStore'
 import { regionLabel } from '../regions'
 import { registerBody, emitRegionClick, glow, setListening, pulse } from './bodyApi'
 import { DEV_SEGMENTS, DEV_SEGMENT_GAP_MS } from './devSegments'
-import { extract } from '@/panels/speech'
+import { extract } from '@/lib/api'
 import IntakePicker from './IntakePicker'
 import { toTen, toUnit } from './intensity'
 import { PATIENTS, DEFAULT_PATIENT, SHAPE_ORDER, regionAt, regionAnchor } from './patientRegions'
@@ -401,7 +401,14 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       pool.map = floorPool(colors)
       pool.needsUpdate = true
       floor.userData.ring.material.color.set(colors.ring)
+      // Light studio: only glows brighter than white may bloom (threshold 1 in the HDR buffer),
+      // otherwise the white backdrop bleeds over the patient and washes them out. Softer vignette.
+      const dark = document.documentElement.classList.contains('dark')
+      bloom.threshold = dark ? 0.82 : 1.0
+      bloom.strength = dark ? 0.5 : 0.35
+      vignette.uniforms.darkness.value = dark ? 1.0 : 0.55
     }
+    applyStage()
     const themeObserver = new MutationObserver(applyStage)
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
 

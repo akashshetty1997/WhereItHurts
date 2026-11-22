@@ -81,7 +81,7 @@ export default function ConversationPanel({ visit, mode, selected, missed }) {
           <p className="text-sm leading-snug text-muted-foreground">
             {mode === 'paint'
               ? 'After you click Start Visit, everything the PT and patient say appears here.'
-              : 'Hold a talk button and speak. Each line appears here.'}
+              : 'Click Record the Visit above, then just talk. Each line appears here.'}
           </p>
         ) : (
           <ol className="space-y-3">
