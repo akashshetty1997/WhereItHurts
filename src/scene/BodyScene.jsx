@@ -2,11 +2,20 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { visitStore } from '../visitStore'
+import { registerBody, emitRegionClick, glow } from './bodyApi'
+import { DEV_SEGMENTS, DEV_SEGMENT_GAP_MS } from './devSegments'
 
-// Placeholder body: capsules and boxes (PLAN fallback option 3) until the GLB is ready.
+// Placeholder body: capsules and boxes (PLAN fallback) until a GLB is ready.
 // The body faces +z (toward the camera), so the PATIENT's left is +x.
 const SKIN = '#cfd8dc'
 const PAIN_COLORS = { burning: '#ff5722', sharp: '#fff59d', aching: '#7e57c2' }
+// Used when the visit JSON has no color for a speaker (v1 mock says "doctor", v2 says "pt").
+const SPEAKER_COLORS = { pt: '#4FC3F7', doctor: '#4FC3F7', patient: '#FFB74D' }
+
+// Glow envelope, in seconds: quick rise, then a slow fade.
+const GLOW_RISE_S = 0.15
+const GLOW_FADE_S = 2.35
+const GLOW_PEAK = 1.4
 
 function part(geometry, position, region = null) {
   const mesh = new THREE.Mesh(
@@ -44,6 +53,33 @@ function buildBody() {
   return body
 }
 
+// 0..1: how strong a glow started at `start` is at time `t`.
+function glowEnvelope(t, start) {
+  const age = t - start
+  if (age < 0) return 0
+  if (age < GLOW_RISE_S) return age / GLOW_RISE_S
+  return Math.max(0, 1 - (age - GLOW_RISE_S) / GLOW_FADE_S)
+}
+
+// v1 mock stores intensity 0–1, v2 stores 0–10.
+const normalizeIntensity = (i) => (i > 1 ? i / 10 : i)
+
+function speakerColor(speaker) {
+  return visitStore.get().speakers?.[speaker]?.color ?? SPEAKER_COLORS[speaker] ?? '#ffffff'
+}
+
+let devDemoPlayed = false
+function playDevSegments() {
+  // Until mockVisit.js moves to v2, the PT is still called "doctor" there.
+  const ptRole = visitStore.get().speakers?.pt ? 'pt' : 'doctor'
+  DEV_SEGMENTS.forEach((seg, i) => {
+    setTimeout(() => {
+      const speaker = seg.speaker === 'pt' ? ptRole : seg.speaker
+      visitStore.addSegment({ id: `dev-${Date.now()}-${i}`, path: [], ...seg, speaker })
+    }, i * DEV_SEGMENT_GAP_MS)
+  })
+}
+
 export default function BodyScene({ onRegionClick }) {
   const mountRef = useRef(null)
   const clickRef = useRef(onRegionClick)
@@ -67,12 +103,39 @@ export default function BodyScene({ onRegionClick }) {
     const body = buildBody()
     scene.add(body)
 
-    // Left button is reserved for painting/clicking; right-drag rotates, scroll zooms.
+    // region id -> its meshes (left_leg has two)
+    const regionMeshes = new Map()
+    body.children.forEach((mesh) => {
+      const region = mesh.userData.region
+      if (!region) return
+      if (!regionMeshes.has(region)) regionMeshes.set(region, [])
+      regionMeshes.get(region).push(mesh)
+    })
+
+    const clock = new THREE.Clock()
+    // region id -> { color, start }
+    const glows = new Map()
+
+    registerBody({
+      glow(region, color) {
+        if (!regionMeshes.has(region)) return
+        glows.set(region, { color: new THREE.Color(color), start: clock.getElapsedTime() })
+      },
+    })
+
+    // Integration: every new segment lights its regions in the speaker's color.
+    const offSegment = visitStore.onSegment((segment) => {
+      const color = speakerColor(segment.speaker)
+      segment.regions.forEach((region) => glow(region, color))
+    })
+
+    // Left button is reserved for tapping regions; right-drag rotates, scroll zooms.
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE }
     controls.enablePan = false
     controls.enableDamping = true
-    renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault())
+    const onContextMenu = (e) => e.preventDefault()
+    renderer.domElement.addEventListener('contextmenu', onContextMenu)
 
     const raycaster = new THREE.Raycaster()
     const pointer = new THREE.Vector2()
@@ -86,7 +149,7 @@ export default function BodyScene({ onRegionClick }) {
       raycaster.setFromCamera(pointer, camera)
       const hit = raycaster.intersectObjects(body.children)[0]
       const region = hit?.object.userData.region ?? null
-      console.log('[raycast] region:', region)
+      emitRegionClick(region)
       clickRef.current?.(region)
     }
     renderer.domElement.addEventListener('pointerdown', onPointerDown)
@@ -101,28 +164,49 @@ export default function BodyScene({ onRegionClick }) {
     observer.observe(mount)
     resize()
 
-    // Placeholder paint look: pulse emissive by pain type. Shader owner replaces this.
-    const clock = new THREE.Clock()
+    const paintColor = new THREE.Color()
     renderer.setAnimationLoop(() => {
       const t = clock.getElapsedTime()
       const painted = new Map(visitStore.get().painted.map((p) => [p.region, p]))
       body.children.forEach((mesh) => {
-        const p = painted.get(mesh.userData.region)
-        if (p) {
-          mesh.material.emissive.set(PAIN_COLORS[p.type])
-          mesh.material.emissiveIntensity = p.intensity * (0.6 + 0.4 * Math.sin(t * 2 * Math.PI))
+        const region = mesh.userData.region
+        const mat = mesh.material
+        // Paint look (placeholder until the pain-type shader, D6): slow pulse in the type's color.
+        const p = painted.get(region)
+        const paintLevel = p ? normalizeIntensity(p.intensity) * (0.6 + 0.4 * Math.sin(t * 2 * Math.PI)) : 0
+        if (p) paintColor.set(PAIN_COLORS[p.type] ?? SKIN)
+
+        const g = glows.get(region)
+        const glowLevel = g ? glowEnvelope(t, g.start) * GLOW_PEAK : 0
+        if (g && glowLevel === 0 && t - g.start > GLOW_RISE_S) glows.delete(region)
+
+        if (glowLevel > paintLevel) {
+          mat.emissive.copy(g.color)
+          mat.emissiveIntensity = glowLevel
+        } else if (p) {
+          mat.emissive.copy(paintColor)
+          mat.emissiveIntensity = paintLevel
         } else {
-          mesh.material.emissiveIntensity = 0
+          mat.emissiveIntensity = 0
         }
       })
       controls.update()
       renderer.render(scene, camera)
     })
 
+    if (import.meta.env.DEV && !devDemoPlayed && new URLSearchParams(location.search).has('demo')) {
+      devDemoPlayed = true
+      playDevSegments()
+    }
+
     return () => {
+      registerBody(null)
+      offSegment()
       renderer.setAnimationLoop(null)
       observer.disconnect()
       controls.dispose()
+      renderer.domElement.removeEventListener('pointerdown', onPointerDown)
+      renderer.domElement.removeEventListener('contextmenu', onContextMenu)
       body.traverse((o) => {
         o.geometry?.dispose()
         o.material?.dispose()
