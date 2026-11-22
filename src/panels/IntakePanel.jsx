@@ -1,5 +1,7 @@
 import { CircleAlert, Plus } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { PATIENTS } from '@/scene/patientRegions'
 import { REGIONS, CLINICAL_TERMS } from '@/regions'
 import { toTen } from '@/scene/intensity'
 import { PAIN_STYLES, PAIN_ICONS } from '@/lib/visitDisplay'
@@ -19,7 +21,7 @@ const COPY = {
 
 // Left sidebar: the goal, then every body part as one grouped list. The list is also the
 // keyboard way to select a part (accessibility.md › Mobility: offer alternatives to gestures).
-export default function IntakePanel({ visit, mode, missed, selected, onSelectRegion }) {
+export default function IntakePanel({ visit, mode, missed, selected, onSelectRegion, patient, onPatientChange }) {
   const copy = COPY[mode]
   const painted = new Map(visit.painted.map((p) => [p.region, p]))
   const missedSet = new Set(missed.map((p) => p.region))
@@ -30,6 +32,29 @@ export default function IntakePanel({ visit, mode, missed, selected, onSelectReg
         <h2 className="text-xl font-bold">{copy.title}</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">{copy.hint}</p>
       </div>
+
+      {onPatientChange && mode === 'paint' && (
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm font-bold text-muted-foreground">Body</span>
+          <ToggleGroup
+            type="single"
+            value={patient}
+            onValueChange={(v) => v && onPatientChange(v)}
+            className="gap-1 rounded-lg bg-secondary p-1"
+            aria-label="Which body to show"
+          >
+            {Object.entries(PATIENTS).map(([id, p]) => (
+              <ToggleGroupItem
+                key={id}
+                value={id}
+                className="h-8 rounded-md px-3 text-sm font-bold data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+              >
+                {p.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+      )}
 
       <section aria-label="What you want to do again" className="space-y-1">
         <h3 className="text-sm font-bold text-muted-foreground">Your Goal</h3>
