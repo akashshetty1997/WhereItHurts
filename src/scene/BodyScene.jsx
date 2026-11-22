@@ -8,6 +8,7 @@ import { DEV_SEGMENTS, DEV_SEGMENT_GAP_MS } from './devSegments'
 // Placeholder body: capsules and boxes (PLAN fallback) until a GLB is ready.
 // The body faces +z (toward the camera), so the PATIENT's left is +x.
 const SKIN = '#cfd8dc'
+const BONE = '#f5f1e6'
 const PAIN_COLORS = { burning: '#ff5722', sharp: '#fff59d', aching: '#7e57c2' }
 // Used when the visit JSON has no color for a speaker (v1 mock says "doctor", v2 says "pt").
 const SPEAKER_COLORS = { pt: '#4FC3F7', doctor: '#4FC3F7', patient: '#FFB74D' }
@@ -17,10 +18,10 @@ const GLOW_RISE_S = 0.15
 const GLOW_FADE_S = 2.35
 const GLOW_PEAK = 1.4
 
-function part(geometry, position, region = null) {
+function part(geometry, position, region = null, color = SKIN) {
   const mesh = new THREE.Mesh(
     geometry,
-    new THREE.MeshStandardMaterial({ color: SKIN, roughness: 0.6 }),
+    new THREE.MeshStandardMaterial({ color, roughness: 0.6 }),
   )
   mesh.position.set(...position)
   mesh.userData.region = region
@@ -35,6 +36,7 @@ function buildBody() {
     part(new THREE.CylinderGeometry(0.1, 0.12, 0.25, 16), [0, 1.2, 0], 'neck'),
     part(cap(0.36, 0.5), [0, 0.7, 0]),
     part(cap(0.32, 0.2), [0, 0.15, 0]),
+    part(new THREE.BoxGeometry(0.6, 0.5, 0.08), [0, 0.72, -0.33], 'upper_back'),
     part(new THREE.BoxGeometry(0.55, 0.4, 0.08), [0, 0.2, -0.3], 'lower_back'),
     part(cap(0.3, 0.1), [0, -0.25, 0]),
     part(new THREE.SphereGeometry(0.17, 24, 12), [-0.46, 0.98, 0], 'right_shoulder'),
@@ -49,8 +51,26 @@ function buildBody() {
     part(cap(0.14, 0.55), [-0.2, -0.75, 0]),
     part(new THREE.SphereGeometry(0.15, 24, 12), [-0.2, -1.17, 0]),
     part(cap(0.12, 0.55), [-0.2, -1.6, 0]),
+    ...buildSpine(),
   )
   return body
+}
+
+// A visible spine on the back, one small vertebra per level, each belonging to its region:
+// cervical = neck, thoracic = upper_back, lumbar = lower_back. Lights up with its region.
+const SPINE_SECTIONS = [
+  { region: 'neck', count: 4, top: 1.3, bottom: 1.1, z: -0.12, size: 0.07 },
+  { region: 'upper_back', count: 8, top: 0.95, bottom: 0.48, z: -0.385, size: 0.08 },
+  { region: 'lower_back', count: 5, top: 0.38, bottom: 0.02, z: -0.355, size: 0.09 },
+]
+
+function buildSpine() {
+  return SPINE_SECTIONS.flatMap(({ region, count, top, bottom, z, size }) =>
+    Array.from({ length: count }, (_, i) => {
+      const y = top - ((top - bottom) * i) / Math.max(1, count - 1)
+      return part(new THREE.BoxGeometry(size, size * 0.6, 0.03), [0, y, z], region, BONE)
+    }),
+  )
 }
 
 // 0..1: how strong a glow started at `start` is at time `t`.
@@ -194,14 +214,28 @@ export default function BodyScene({ onRegionClick }) {
       renderer.render(scene, camera)
     })
 
-    if (import.meta.env.DEV && !devDemoPlayed && new URLSearchParams(location.search).has('demo')) {
-      devDemoPlayed = true
-      playDevSegments()
+    // Dev-only URL options: ?demo plays the script, ?view=back starts facing the back,
+    // ?glow=<region> lights one region (repeats every 3 s).
+    let devGlowTimer = null
+    if (import.meta.env.DEV) {
+      const params = new URLSearchParams(location.search)
+      if (params.get('view') === 'back') camera.position.set(0, 0.2, -7)
+      const devRegion = params.get('glow')
+      if (devRegion) {
+        const fire = () => glow(devRegion, SPEAKER_COLORS.pt)
+        fire()
+        devGlowTimer = setInterval(fire, 3000)
+      }
+      if (!devDemoPlayed && params.has('demo')) {
+        devDemoPlayed = true
+        playDevSegments()
+      }
     }
 
     return () => {
       registerBody(null)
       offSegment()
+      clearInterval(devGlowTimer)
       renderer.setAnimationLoop(null)
       observer.disconnect()
       controls.dispose()
