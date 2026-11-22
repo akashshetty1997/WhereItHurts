@@ -8,3 +8,5 @@ models
 samples/*.wav
 samples/*.m4a
 samples/*.webm
+# Demo accounts database (settings.users_db_path)
+/data/

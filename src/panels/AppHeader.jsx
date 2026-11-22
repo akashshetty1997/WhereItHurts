@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import UserMenu from '@/auth/UserMenu'
 
 const STEPS = [
   { mode: 'paint', label: 'Mark your pain' },
@@ -17,6 +18,7 @@ export default function AppHeader({ mode }) {
           Show where it hurts. Say what it feels like.
         </span>
       </div>
+      <div className="flex items-center gap-4">
       <ol className="flex items-center gap-2" aria-label="Visit steps">
         {STEPS.map((step, i) => (
           <li key={step.mode} className="flex items-center gap-2">
@@ -43,6 +45,8 @@ export default function AppHeader({ mode }) {
           </li>
         ))}
       </ol>
+      <UserMenu />
+      </div>
     </header>
   )
 }
