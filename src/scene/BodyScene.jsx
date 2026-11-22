@@ -600,6 +600,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       anatomyRegion = region
       setAnatomyOpen({ region, ready: false, sim, label })
       setStructure(null)
+      // Clear the stage for the anatomy (not saved: the Controls button brings the panel back).
+      setShowControlsState(false)
       let ok = false
       try {
         ok = await anatomy.show(region)
@@ -692,7 +694,19 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       const rect = renderer.domElement.getBoundingClientRect()
       pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1)
       raycaster.setFromCamera(pointer, camera)
-      return raycaster.intersectObjects(meshes, false)[0]?.object ?? null
+      // Joints first: they're drawn on top and sit inside the bones. A little slack (about 14 px)
+      // makes the small markers easy to hit.
+      let joint = null
+      let best = 14 // pixels
+      for (const m of anatomy.markers()) {
+        const p = m.getWorldPosition(new THREE.Vector3()).project(camera)
+        const d = Math.hypot(((p.x - pointer.x) * rect.width) / 2, ((p.y - pointer.y) * rect.height) / 2)
+        if (p.z < 1 && d < best) {
+          best = d
+          joint = m
+        }
+      }
+      return joint ?? raycaster.intersectObjects(meshes, false)[0]?.object ?? null
     }
 
     // Integration: every new segment lights its regions in the speaker's color.
@@ -985,6 +999,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         }
       }
       patientUniforms.setXray(xray.a, xray.b, xray.radius, xray.level, xray.showMark, xray.skin)
+      anatomy.update(t)
 
       // Reach Up: move the arm, and pulse the shoulder while it's inside the band where it hurts.
       if (simActive && simActive.update(timer.getDelta()) && t - lastBandGlow > 1.2) {
@@ -1176,9 +1191,14 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       <div ref={mountRef} className="scene" />
       {/* View controls: a floating functional layer over the 3D content. */}
       <div className="pointer-events-none absolute inset-x-4 top-4 flex items-start justify-between gap-3">
-        <p className="rounded-full bg-card/85 px-3 py-1.5 text-sm text-muted-foreground ring-1 ring-border backdrop-blur">
-          Drag to turn · Shift-drag to slide up or down · Double-click a part to zoom in
-        </p>
+        {/* Show Anatomy puts its own panel in this corner. */}
+        {anatomyOpen ? (
+          <span />
+        ) : (
+          <p className="rounded-full bg-card/85 px-3 py-1.5 text-sm text-muted-foreground ring-1 ring-border backdrop-blur">
+            Drag to turn · Shift-drag to slide up or down · Double-click a part to zoom in
+          </p>
+        )}
         <div className="pointer-events-auto flex flex-col items-end gap-2">
           <div className="flex gap-1 rounded-xl bg-card/85 p-1 ring-1 ring-border backdrop-blur">
             <ViewButton label="Zoom Out (−)" onClick={() => viewRef.current?.zoom(ZOOM_STEP)} icon={ZoomOut} iconOnly />
