@@ -1,0 +1,4 @@
+BodyParts3D, © The Database Center for Life Science, licensed under CC Attribution 4.0 International
+https://creativecommons.org/licenses/by/4.0/
+Source: https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/isa_BP3D_4.0_obj_99.zip
+Used as reference anatomy (an illustration, not a scan of any patient). Converted to glTF by tools/anatomy/build.mjs.

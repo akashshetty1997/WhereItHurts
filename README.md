@@ -35,6 +35,8 @@ curl localhost:8000/api/health                # {"transcription":"ok","llm":"cla
 | `src/panels/LiveListen.jsx`, `liveVoice.js` | **Record the Visit**: mic → WebSocket `/api/live`; voice enrollment, then every line labelled PT / Patient |
 | `src/panels/smartPass.js` | Claude improves each visit line in the background (missed body parts, rating, movement, follow-up) |
 | `src/panels/movementLog.js`, `MovementCheck.jsx` | Movement check (PT names a movement, patient rates before / after) |
+| `src/scene/anatomy.js`, `AnatomyOverlay.jsx` | **Show Anatomy** (PT or Testing mode): reference bones, muscles and joints inside a selected region, see-through skin, Explain to Patient, Add to Report |
+| `tools/anatomy/` | Builds `public/models/anatomy.glb` from BodyParts3D (`structures.json` lists each region's structures; `node tools/anatomy/build.mjs`) |
 | `src/panels/VisitWrapUp.jsx` | Summary: confirm cards, PT summary |
 | `src/visitStore.js` | The visit state (kept in the browser across a refresh; **New Visit** clears it) |
 | `src/auth/` | Demo accounts (patient / PT), Testing mode, Try the Demo, light / dark |
@@ -42,10 +44,13 @@ curl localhost:8000/api/health                # {"transcription":"ok","llm":"cla
 
 Region ids: `head`, `neck`, `upper_back`, `lower_back`, `left_leg`, `left_knee`, `right_shoulder` (left / right = the patient's side).
 
+Show Anatomy: select a body part, then **Show Anatomy** (or X). Click a bone or muscle for its plain name and what it does. Esc goes back to the skin. Each region's fit to each body is in `src/scene/patientRegions.js` (`anatomy`); in dev, `?fit=<region>:x,y,z,armDegrees,scale` tries another.
+
 Controls: click a body part to select it, drag to turn, Shift-drag to slide up or down, scroll to zoom. No mouse: the **View Controls** panel, or ← → turn, ↑ ↓ tilt, Shift+↑ ↓ slide, + − zoom, F L B R sides, 0 whole body, ? controls.
 
 ## Credits
 
 - **Patient model:** "Sports_Male_04" from [Microsoft Rocketbox](https://github.com/microsoft/Microsoft-Rocketbox), MIT License (`public/models/LICENSE-rocketbox.txt`). Converted to a static glTF (A-pose baked, PBR roughness from the specular maps) and compressed with gltf-transform (meshopt + WebP): `public/models/patient.glb`, 1.4 MB.
 - **Female patient model:** "Sports_Female_02" from [Microsoft Rocketbox](https://github.com/microsoft/Microsoft-Rocketbox), MIT License (`public/models/LICENSE-rocketbox.txt`), converted the same way: `public/models/patient-female.glb`.
+- **Reference anatomy:** [BodyParts3D](https://dbarchive.biosciencedbc.jp/en/bodyparts3d/), © The Database Center for Life Science, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (`public/models/LICENSE-bodyparts3d.txt`). The listed bones and muscles converted to glTF and compressed by `tools/anatomy/build.mjs`: `public/models/anatomy.glb`, 3.9 MB, loaded the first time anatomy is shown. An illustration, not any patient's scan.
 - **Studio lighting:** "Studio Small 08" HDRI from [Poly Haven](https://polyhaven.com/a/studio_small_08), CC0: `public/hdri/studio_small_08_1k.hdr`.

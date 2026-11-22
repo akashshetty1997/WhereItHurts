@@ -14,12 +14,14 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { VignetteShader } from 'three/addons/shaders/VignetteShader.js'
 import { visitStore, useVisit, unmentioned } from '../visitStore'
 import { regionLabel } from '../regions'
-import { registerBody, emitRegionClick, glow, setListening, pulse } from './bodyApi'
+import { registerBody, emitRegionClick, glow, setListening, pulse, showAnatomy, anatomyLayer } from './bodyApi'
 import { DEV_SEGMENTS, DEV_SEGMENT_GAP_MS } from './devSegments'
 import { extract } from '@/lib/api'
 import IntakePicker from './IntakePicker'
 import { toTen, toUnit } from './intensity'
 import { PATIENTS, DEFAULT_PATIENT, SHAPE_ORDER, regionAt, regionAnchor } from './patientRegions'
+import { createAnatomy } from './anatomy'
+import AnatomyOverlay from './AnatomyOverlay'
 import { createPatientMaterial, patientUniforms } from '../shaders/patientMaterial'
 import {
   ChevronDown,
@@ -28,6 +30,7 @@ import {
   ChevronUp,
   ChevronsDown,
   ChevronsUp,
+  Bone,
   Focus,
   Gamepad2,
   Maximize2,
@@ -285,7 +288,7 @@ function fakeVoiceIntake(region) {
 }
 
 // Remount with key={patient} to switch patients (App.jsx does).
-export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEFAULT_PATIENT }) {
+export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEFAULT_PATIENT, canShowAnatomy = false }) {
   const patientRef = useRef(patient)
   const viewRef = useRef(null) // camera actions for the overlay buttons
   const mountRef = useRef(null)
@@ -306,6 +309,13 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       saveControlsOpen(value)
       return value
     })
+  // Show Anatomy: { region, ready } while open; the structure the PT picked inside it.
+  const [anatomyOpen, setAnatomyOpen] = useState(null)
+  const [structure, setStructure] = useState(null)
+  const [hoverLabel, setHoverLabel] = useState(null)
+  const [layers, setLayers] = useState({ skin: true, muscle: true, bone: true, mark: true })
+  const canAnatomyRef = useRef(canShowAnatomy)
+  canAnatomyRef.current = canShowAnatomy
   const selectedRef = useRef(null)
   const listeningRef = useRef(null)
   selectedRef.current = selected
@@ -415,7 +425,21 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
     const patientRoot = new THREE.Group()
     scene.add(patientRoot)
     const patientMeshes = []
+    const skinMaterials = [] // [{ material, transparent }]: see-through while anatomy is open
     const labels = new Map()
+    // Dev: ?fit=right_shoulder:x,y,z,armDegrees,scale tries another anatomy fit (see patientRegions.js).
+    const devFit = import.meta.env.DEV && new URLSearchParams(location.search).get('fit')
+    if (devFit) {
+      const [region, nums] = devFit.split(':')
+      const [x, y, z, arm, scale] = nums.split(',').map(Number)
+      const fit = model.anatomy?.[region]
+      if (fit) {
+        fit.target.set(x, y, z)
+        if (scale) fit.scale = scale
+        if (fit.arm && !Number.isNaN(arm)) fit.arm.z = arm
+      }
+    }
+    const anatomy = createAnatomy(patientRoot, model.anatomy)
 
     new GLTFLoader()
       .setMeshoptDecoder(MeshoptDecoder)
@@ -438,6 +462,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
           o.material = Array.isArray(o.material)
             ? o.material.map((m) => createPatientMaterial(m, restMatrix, maxAniso))
             : createPatientMaterial(o.material, restMatrix, maxAniso)
+          for (const material of [o.material].flat()) skinMaterials.push({ material, transparent: material.transparent })
           o.castShadow = true
           o.receiveShadow = true
         })
@@ -482,6 +507,39 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
           seconds: Math.max(PULSE_MIN_SECONDS, route.total / PULSE_SPEED),
         }
       },
+      // A still of the whole body from the front or back, on white, for the printed reports.
+      // Rendered and read back in the same tick (no preserveDrawingBuffer needed); the view the
+      // person was looking at comes straight back.
+      snapshot(side) {
+        const saved = {
+          position: camera.position.clone(),
+          target: controls.target.clone(),
+          background: scene.background,
+          bloom: bloom.enabled,
+          vignette: vignette.enabled,
+        }
+        const offset = CAMERA_HOME.clone().sub(CAMERA_TARGET)
+        if (side === 'back') offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI)
+        camera.position.copy(CAMERA_TARGET).add(offset)
+        camera.lookAt(CAMERA_TARGET)
+        scene.background = new THREE.Color('#ffffff')
+        floor.visible = false
+        bloom.enabled = false
+        vignette.enabled = false
+        composer.render()
+        const url = renderer.domElement.toDataURL('image/png')
+        scene.background = saved.background
+        floor.visible = true
+        bloom.enabled = saved.bloom
+        vignette.enabled = saved.vignette
+        camera.position.copy(saved.position)
+        controls.target.copy(saved.target)
+        camera.lookAt(saved.target)
+        composer.render()
+        return { url, aspect: renderer.domElement.width / renderer.domElement.height }
+      },
+      showAnatomy: (region) => (region ? openAnatomy(region) : closeAnatomy()),
+      anatomyLayer: (layer, visible) => setAnatomyLayer(layer, visible),
       select(region) {
         setSelected(region)
         emitRegionClick(region)
@@ -490,6 +548,77 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         if (region) focusRegion(region)
       },
     })
+
+    // Show Anatomy: the skin around the region fades to see-through (the shader's x-ray sphere),
+    // the reference anatomy appears inside, and ambient occlusion is turned off so it isn't
+    // shaded by the skin it's seen through. Closing fades back, then removes it.
+    const xray = { level: 0, goal: 0, a: new THREE.Vector3(), b: new THREE.Vector3(), radius: 0.28, showMark: true }
+    let anatomyRequest = 0
+    let anatomyRegion = null // open (or opening)
+    const setSkinSeeThrough = (on) => {
+      for (const s of skinMaterials) {
+        const next = on || s.transparent
+        if (s.material.transparent !== next) {
+          s.material.transparent = next
+          s.material.needsUpdate = true
+        }
+      }
+    }
+    async function openAnatomy(region) {
+      if (!anatomy.has(region)) return
+      const request = ++anatomyRequest
+      anatomyRegion = region
+      setAnatomyOpen({ region, ready: false })
+      setStructure(null)
+      let ok = false
+      try {
+        ok = await anatomy.show(region)
+      } catch (error) {
+        console.error('Show Anatomy failed to load', error)
+        ok = false
+      }
+      if (disposed || request !== anatomyRequest) return
+      if (!ok) {
+        anatomyRegion = null
+        return setAnatomyOpen(null)
+      }
+      const fit = anatomy.region().fit
+      // See-through around the anchor, or along a limb (fit.xray: { a, b, r }).
+      xray.a.copy(fit.xray?.a ?? fit.target)
+      xray.b.copy(fit.xray?.b ?? fit.target)
+      xray.radius = fit.xray?.r ?? 0.28
+      xray.goal = 1
+      setSkinSeeThrough(true)
+      gtao.blendIntensity = 0
+      bloom.enabled = false // light bones would bloom into a white haze
+      setAnatomyOpen({ region, ready: true })
+      focusRegion(region)
+    }
+    function closeAnatomy() {
+      anatomyRequest++
+      anatomyRegion = null
+      anatomy.hide()
+      xray.goal = 0
+      anatomy.highlight(null)
+      setAnatomyOpen(null)
+      setStructure(null)
+      setLayers({ skin: true, muscle: true, bone: true, mark: true })
+      anatomy.setLayer('muscle', true)
+      anatomy.setLayer('bone', true)
+    }
+    function setAnatomyLayer(layer, visible) {
+      if (layer === 'mark') xray.showMark = visible
+      else if (layer === 'skin') xray.goal = visible ? 1 : 1.6 // past 1 = skin fully gone around the region
+      else anatomy.setLayer(layer, visible)
+    }
+    const structureUnder = (e) => {
+      const meshes = anatomy.meshes()
+      if (!meshes.length) return null
+      const rect = renderer.domElement.getBoundingClientRect()
+      pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1)
+      raycaster.setFromCamera(pointer, camera)
+      return raycaster.intersectObjects(meshes, false)[0]?.object ?? null
+    }
 
     // Integration: every new segment lights its regions in the speaker's color.
     let ratingOverride = null // { region, rating }: Before / After from the movement check
@@ -566,6 +695,12 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       const quick = performance.now() - press.t < TAP_MAX_MS
       press = null
       if (moved > TAP_MAX_MOVE || !quick) return
+      if (anatomy.current()) {
+        const mesh = structureUnder(e)
+        anatomy.highlight(mesh, 0.35)
+        setStructure(mesh ? { ...mesh.userData } : null)
+        return
+      }
       const region = regionUnder(e)
       // Two clicks on the same part in quick succession: a close-up of it. (Detected here, not
       // with dblclick, so the pain card opening after the first click can't swallow the second.)
@@ -589,6 +724,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
     // Hover: the region under the pointer gets a faint outline, and the cursor shows it's tappable.
     // Raycasting runs at most once per frame.
     let hovered = null
+    let hoveredStructure = null
     let pendingMove = null
     const onPointerMove = (e) => {
       pendingMove = e
@@ -623,7 +759,12 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
     const onKeyDown = (e) => {
       if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return
       if (e.metaKey || e.ctrlKey || e.altKey) return
-      if (e.key === 'Escape') return setSelected(null)
+      if (e.key === 'Escape') return anatomyRegion ? closeAnatomy() : setSelected(null)
+      if (e.key.toLowerCase() === 'x' && canAnatomyRef.current) {
+        if (anatomyRegion) return closeAnatomy()
+        if (selectedRef.current && anatomy.has(selectedRef.current)) return openAnatomy(selectedRef.current)
+        return
+      }
       const shiftSlide = e.shiftKey && { ArrowUp: () => slide(1), ArrowDown: () => slide(-1) }[e.key]
       const action = shiftSlide || KEY_ACTIONS[e.key.length === 1 ? e.key.toLowerCase() : e.key]
       if (!action) return
@@ -736,10 +877,32 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       }
 
       if (pendingMove) {
-        hovered = regionUnder(pendingMove)
-        renderer.domElement.style.cursor = hovered ? 'pointer' : 'default'
+        if (anatomy.current()) {
+          const mesh = structureUnder(pendingMove)
+          if (mesh !== hoveredStructure) {
+            hoveredStructure = mesh
+            setHoverLabel(mesh?.userData.label ?? null)
+          }
+          renderer.domElement.style.cursor = mesh ? 'pointer' : 'default'
+          hovered = null
+        } else {
+          hovered = regionUnder(pendingMove)
+          renderer.domElement.style.cursor = hovered ? 'pointer' : 'default'
+        }
         pendingMove = null
       }
+
+      // Show Anatomy fade (about 0.6 s each way).
+      if (xray.level !== xray.goal) {
+        const step = timer.getDelta() / (reduceMotion ? 0.001 : 0.6)
+        xray.level = xray.goal > xray.level ? Math.min(xray.goal, xray.level + step) : Math.max(xray.goal, xray.level - step)
+        if (xray.level === 0 && !anatomyRegion) {
+          setSkinSeeThrough(false)
+          gtao.blendIntensity = 0.85
+          bloom.enabled = true
+        }
+      }
+      patientUniforms.setXray(xray.a, xray.b, xray.radius, xray.level, xray.showMark)
 
       // A person never stands perfectly still: a slow, tiny weight shift from the feet.
       patientRoot.rotation.z = Math.sin(t * 0.55) * 0.004
@@ -798,7 +961,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
                 : hovered === region && modeRef.current === 'paint'
                   ? RING_HOVER
                   : null
-        patientUniforms.setRing(region, ring?.color, ring?.level ?? 0)
+        // Show Anatomy: no rings over the see-through skin.
+        patientUniforms.setRing(region, anatomyRegion ? null : ring?.color, anatomyRegion ? 0 : (ring?.level ?? 0))
       }
 
       // Labels: during intake, every marked region shows "Right shoulder · aching · 5/10";
@@ -810,7 +974,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         const facing = !BACK_REGIONS.has(region) || cameraBehind
         const isMissed = !!missed?.has(region)
         const isAssessed = assessed === region && !isMissed
-        entry.label.visible = (((intake || isMissed) && !!p) || isAssessed) && facing
+        entry.label.visible = (((intake || isMissed) && !!p) || isAssessed) && facing && !anatomyRegion
         entry.el.classList.toggle('flag', isMissed)
         entry.el.classList.toggle('assessed', isAssessed)
         if (!entry.label.visible) return
@@ -843,6 +1007,11 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         )
       }
       if (params.get('view') === 'back') camera.position.set(0, 1.0, -5.2)
+      // ?anatomy=right_shoulder opens Show Anatomy once the patient has loaded.
+      const devAnatomy = params.get('anatomy')
+      if (devAnatomy) setTimeout(() => openAnatomy(devAnatomy), 2500)
+      // For screenshot scripts: camera and anatomy controls from the console.
+      window.__scene = { moveTo, currentView, openAnatomy, closeAnatomy, setAnatomyLayer, THREE, patientRoot, patientMeshes, anatomy }
       const devRegion = params.get('glow')
       if (devRegion) {
         const fire = () => glow(devRegion, SPEAKER_COLORS.pt)
@@ -871,6 +1040,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
 
     return () => {
       disposed = true
+      if (import.meta.env.DEV) delete window.__scene
       registerBody(null)
       offSegment()
       clearInterval(devGlowTimer)
@@ -935,10 +1105,21 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
               pressed={showControls}
             />
           </div>
-          {selected && (
+          {selected && !anatomyOpen && (
             <Button variant="default" className="gap-2" onClick={() => viewRef.current?.focusRegion(selected)}>
               <Focus className="size-4" aria-hidden />
               Close Up: {fullRegionLabel(selected)}
+            </Button>
+          )}
+          {selected && !anatomyOpen && canShowAnatomy && PATIENTS[patient]?.anatomy?.[selected] && (
+            <Button
+              variant="secondary"
+              className="gap-2"
+              onClick={() => showAnatomy(selected)}
+              title="Show the bones and muscles under the skin (X)"
+            >
+              <Bone className="size-4" aria-hidden />
+              Show Anatomy <kbd className="text-xs text-muted-foreground">X</kbd>
             </Button>
           )}
         </div>
@@ -951,7 +1132,22 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       {!loaded && (
         <p className="absolute inset-x-0 top-1/2 text-center text-sm text-muted-foreground">Loading the patient…</p>
       )}
-      {mode === 'paint' && selected && pickerFor === selected && (
+      {anatomyOpen && (
+        <AnatomyOverlay
+          region={anatomyOpen.region}
+          ready={anatomyOpen.ready}
+          structure={structure}
+          hoverLabel={hoverLabel}
+          layers={layers}
+          onLayer={(layer, visible) => {
+            setLayers((current) => ({ ...current, [layer]: visible }))
+            anatomyLayer(layer, visible)
+          }}
+          onClose={() => showAnatomy(null)}
+          onCloseStructure={() => setStructure(null)}
+        />
+      )}
+      {mode === 'paint' && selected && pickerFor === selected && !anatomyOpen && (
         <IntakePicker
           region={selected}
           entry={entry}

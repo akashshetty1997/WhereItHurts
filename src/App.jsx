@@ -25,6 +25,8 @@ export default function App() {
     PATIENTS[saved.patient] ? saved.patient : PATIENTS[user?.gender] ? user.gender : DEFAULT_PATIENT,
   )
   const canSwitchBody = user?.role === 'pt' || testMode
+  // Show Anatomy is a PT tool (Testing mode shows it to anyone).
+  const canShowAnatomy = user?.role === 'pt' || testMode
   useEffect(() => saveSession({ mode, patient }), [mode, patient])
   // Every conversation line feeds the movement check (PT names a movement, patient rates it), and
   // so does what Claude adds to a line afterwards (src/panels/smartPass.js).
@@ -54,7 +56,13 @@ export default function App() {
           onPatientChange={canSwitchBody ? setPatient : null}
         />
         <main className="relative min-h-0 min-w-0 overflow-hidden bg-stage text-foreground">
-          <BodyScene key={patient} patient={patient} onRegionClick={setSelected} mode={mode} />
+          <BodyScene
+            key={patient}
+            patient={patient}
+            onRegionClick={setSelected}
+            mode={mode}
+            canShowAnatomy={canShowAnatomy}
+          />
         </main>
         <ConversationPanel visit={visit} mode={mode} selected={selected} missed={missed} />
       </div>

@@ -36,6 +36,23 @@ export function showRatings(region, rating) {
   impl?.showRatings(region, rating)
 }
 
+// Show Anatomy (PT or Testing mode): reference bones and muscles inside a region, the skin
+// see-through around it. null closes it.
+export function showAnatomy(region) {
+  impl?.showAnatomy(region)
+}
+
+// Show Anatomy layers: 'skin' | 'muscle' | 'bone' | 'mark' (the patient's own pain mark).
+export function anatomyLayer(layer, visible) {
+  impl?.anatomyLayer(layer, visible)
+}
+
+// Reports: a still of the whole body, 'front' or 'back', on white. Returns { url, aspect } (a PNG
+// data URL and its width / height), or null before the body has mounted.
+export function snapshot(side) {
+  return impl?.snapshot(side) ?? null
+}
+
 // Subscribe to region clicks. The callback gets a region id, or null for a miss. Returns unsubscribe.
 export function onRegionClick(callback) {
   clickListeners.add(callback)

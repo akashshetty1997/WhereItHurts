@@ -15,3 +15,12 @@ export const PAIN_STYLES = {
 
 // A shape per pain type, so the type never depends on color alone (accessibility.md › Vision).
 export const PAIN_ICONS = { burning: Flame, sharp: Zap, aching: Waves }
+
+// Show Anatomy notes (visitStore.addAnatomyNote): why each structure went into the report, and the
+// notes grouped by the complaint (region) they were shown for, in the order they were added.
+export const ANATOMY_PURPOSE = { discussed: 'discussed with patient', examined: 'examined' }
+export function groupAnatomyNotes(notes) {
+  const groups = new Map()
+  for (const n of notes) groups.set(n.complaintRegion, [...(groups.get(n.complaintRegion) ?? []), n])
+  return [...groups]
+}

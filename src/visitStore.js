@@ -10,6 +10,7 @@ export const emptyVisit = () => ({
   segments: [],
   followUps: [],
   observations: [],
+  anatomyNotes: [],
 })
 
 // The visit is kept in this browser, so a page refresh mid-visit loses nothing. New Visit and
@@ -117,6 +118,21 @@ export const visitStore = {
   addFollowUp(followUp) {
     if (state.followUps.some((f) => f.segmentId && f.segmentId === followUp.segmentId)) return
     state = { ...state, followUps: [...state.followUps, followUp] }
+    emit()
+  },
+  // Show Anatomy → Add to Report: a structure the PT explained or examined, filed under the
+  // complaint (region) it was shown for. { complaintRegion, structure, purpose, note }
+  addAnatomyNote(note) {
+    const id = `anat-${Date.now().toString(36)}`
+    state = {
+      ...state,
+      anatomyNotes: [...(state.anatomyNotes ?? []), { id, time: new Date().toISOString(), ...note }],
+    }
+    emit()
+    return id
+  },
+  removeAnatomyNote(id) {
+    state = { ...state, anatomyNotes: (state.anatomyNotes ?? []).filter((n) => n.id !== id) }
     emit()
   },
   onSegment(listener) {

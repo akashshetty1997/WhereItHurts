@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { REGIONS, regionLabel } from '@/regions'
 import { toTen } from '@/scene/intensity'
 import { visitStore, goalDiscussed } from '@/visitStore'
-import { PAIN_STYLES } from '@/lib/visitDisplay'
+import { PAIN_STYLES, ANATOMY_PURPOSE, groupAnatomyNotes } from '@/lib/visitDisplay'
 import { cn } from '@/lib/utils'
 
 const lower = (region) => (region ? REGIONS[region].toLowerCase() : 'symptom')
@@ -99,7 +99,27 @@ export function PtSummary({ visit, missed }) {
       <Row title="Follow-ups">
         {visit.followUps.length ? visit.followUps.map((f) => f.text).join('; ') : 'None'}
       </Row>
+      <AnatomyNotesRow notes={visit.anatomyNotes ?? []} />
     </section>
+  )
+}
+
+// Show Anatomy → Add to Report, grouped by the complaint they were shown for.
+function AnatomyNotesRow({ notes }) {
+  if (!notes.length) return null
+  return (
+    <Row title="Anatomy notes">
+      <ul className="space-y-1">
+        {groupAnatomyNotes(notes).map(([region, items]) => (
+          <li key={region}>
+            <span className="font-bold">For {REGIONS[region]?.toLowerCase() ?? region}:</span>{' '}
+            {items
+              .map((n) => `${n.structure.label} (${n.structure.anatomical}), ${ANATOMY_PURPOSE[n.purpose] ?? n.purpose}${n.note ? `: “${n.note}”` : ''}`)
+              .join('; ')}
+          </li>
+        ))}
+      </ul>
+    </Row>
   )
 }
 

@@ -1,0 +1,802 @@
+{
+  "source": {
+    "name": "BodyParts3D 4.0",
+    "zip": "https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/isa_BP3D_4.0_obj_99.zip",
+    "partsList": "https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/isa_parts_list_e.txt",
+    "credit": "BodyParts3D, © The Database Center for Life Science, licensed under CC Attribution 4.0 International",
+    "elementParts": "https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/isa_element_parts.txt"
+  },
+  "reference": {
+    "_comment": "Bones used only to work out up / front / left and the scale; not exported.",
+    "top": [
+      "FMA52734"
+    ],
+    "feet": [
+      "FMA24497",
+      "FMA24498"
+    ],
+    "front": [
+      "FMA7487"
+    ],
+    "back": [
+      "FMA9165"
+    ],
+    "left": [
+      "FMA23131"
+    ],
+    "right": [
+      "FMA23130"
+    ]
+  },
+  "regions": {
+    "right_shoulder": {
+      "overlay": true,
+      "structures": [
+        {
+          "fma": "FMA23130",
+          "kind": "bone",
+          "label": "Upper arm bone",
+          "anatomical": "Humerus",
+          "sentence": "The bone of your upper arm. Its rounded top sits in the shoulder socket."
+        },
+        {
+          "fma": "FMA13395",
+          "kind": "bone",
+          "label": "Shoulder blade",
+          "anatomical": "Scapula",
+          "sentence": "The flat, triangle-shaped bone on your upper back. It holds the shoulder socket."
+        },
+        {
+          "fma": "FMA13322",
+          "kind": "bone",
+          "label": "Collarbone",
+          "anatomical": "Clavicle",
+          "sentence": "The bone across the top of your chest, from your breastbone to your shoulder."
+        },
+        {
+          "fma": "FMA34680",
+          "kind": "muscle",
+          "label": "Front of the shoulder muscle",
+          "anatomical": "Deltoid, front (clavicular) part",
+          "sentence": "The front part of the big rounded muscle on your shoulder. It lifts your arm forward."
+        },
+        {
+          "fma": "FMA34682",
+          "kind": "muscle",
+          "label": "Side of the shoulder muscle",
+          "anatomical": "Deltoid, side (acromial) part",
+          "sentence": "The middle part of the big rounded muscle on your shoulder. It lifts your arm out to the side."
+        },
+        {
+          "fma": "FMA34684",
+          "kind": "muscle",
+          "label": "Back of the shoulder muscle",
+          "anatomical": "Deltoid, back (spinal) part",
+          "sentence": "The back part of the big rounded muscle on your shoulder. It moves your arm backward."
+        },
+        {
+          "fma": "FMA32544",
+          "kind": "muscle",
+          "label": "Top rotator cuff muscle",
+          "anatomical": "Supraspinatus",
+          "sentence": "A rotator cuff muscle on top of the shoulder blade. It helps start lifting your arm."
+        },
+        {
+          "fma": "FMA32547",
+          "kind": "muscle",
+          "label": "Back rotator cuff muscle",
+          "anatomical": "Infraspinatus",
+          "sentence": "A rotator cuff muscle on the back of the shoulder blade. It turns your arm outward."
+        },
+        {
+          "fma": "FMA32553",
+          "kind": "muscle",
+          "label": "Small back rotator cuff muscle",
+          "anatomical": "Teres minor",
+          "sentence": "A small rotator cuff muscle below the infraspinatus. It also turns your arm outward."
+        },
+        {
+          "fma": "FMA13414",
+          "kind": "muscle",
+          "label": "Front rotator cuff muscle",
+          "anatomical": "Subscapularis",
+          "sentence": "A rotator cuff muscle on the front of the shoulder blade, against the ribs. It turns your arm inward."
+        }
+      ],
+      "joints": [
+        {
+          "id": "right_ac_joint",
+          "label": "AC joint",
+          "anatomical": "Acromioclavicular joint",
+          "sentence": "Where your collarbone meets the top of your shoulder blade.",
+          "recipe": {
+            "type": "closest",
+            "a": "FMA13322",
+            "b": "FMA13395"
+          }
+        },
+        {
+          "id": "right_glenohumeral_joint",
+          "label": "Shoulder joint",
+          "anatomical": "Glenohumeral joint (ball and socket)",
+          "sentence": "The ball-and-socket joint: the top of your upper arm bone sits in your shoulder blade's socket.",
+          "recipe": {
+            "type": "closest",
+            "a": "FMA23130",
+            "b": "FMA13395",
+            "aTop": 0.15
+          }
+        }
+      ],
+      "landmarks": {
+        "_comment": "Anatomy points used to fit the region to the patient (src/scene/patientRegions.js anatomyAnchors).",
+        "shoulder_joint": {
+          "joint": "right_glenohumeral_joint"
+        },
+        "ac_joint": {
+          "joint": "right_ac_joint"
+        },
+        "clavicle_medial": {
+          "farthestFrom": "right_ac_joint",
+          "on": "FMA13322"
+        }
+      }
+    },
+    "neck": {
+      "overlay": true,
+      "structures": [
+        {
+          "fma": "FMA12519",
+          "kind": "bone",
+          "label": "Top neck bone (C1)",
+          "anatomical": "Atlas (C1 vertebra)",
+          "sentence": "The ring-shaped top bone of your neck. Your head rests on it and nods on it."
+        },
+        {
+          "fma": "FMA12520",
+          "kind": "bone",
+          "label": "Second neck bone (C2)",
+          "anatomical": "Axis (C2 vertebra)",
+          "sentence": "The second neck bone. Your head turns side to side around a peg on it."
+        },
+        {
+          "fma": "FMA12521",
+          "kind": "bone",
+          "label": "Neck bone C3",
+          "anatomical": "Third cervical vertebra",
+          "sentence": "One of the seven small bones stacked in your neck."
+        },
+        {
+          "fma": "FMA12522",
+          "kind": "bone",
+          "label": "Neck bone C4",
+          "anatomical": "Fourth cervical vertebra",
+          "sentence": "One of the seven small bones stacked in your neck."
+        },
+        {
+          "fma": "FMA12523",
+          "kind": "bone",
+          "label": "Neck bone C5",
+          "anatomical": "Fifth cervical vertebra",
+          "sentence": "One of the seven small bones stacked in your neck. Nerves to your shoulder leave near here."
+        },
+        {
+          "fma": "FMA12524",
+          "kind": "bone",
+          "label": "Neck bone C6",
+          "anatomical": "Sixth cervical vertebra",
+          "sentence": "One of the seven small bones stacked in your neck. Nerves to your arm leave near here."
+        },
+        {
+          "fma": "FMA12525",
+          "kind": "bone",
+          "label": "Neck bone C7",
+          "anatomical": "Seventh cervical vertebra",
+          "sentence": "The lowest neck bone. It's the bump you can feel at the base of your neck."
+        },
+        {
+          "fma": "FMA13895",
+          "kind": "disc",
+          "label": "Neck discs",
+          "anatomical": "Cervical intervertebral discs",
+          "sentence": "Soft cushions between the neck bones that absorb shock and let your neck bend."
+        },
+        {
+          "fma": "FMA13407",
+          "kind": "muscle",
+          "label": "Side neck muscle",
+          "anatomical": "Sternocleidomastoid",
+          "sentence": "The strap muscle on each side of your neck. It turns and tilts your head."
+        },
+        {
+          "fma": "FMA22653",
+          "kind": "muscle",
+          "label": "Back of the neck muscle",
+          "anatomical": "Splenius capitis",
+          "sentence": "A muscle at the back of your neck that tips your head back and turns it."
+        },
+        {
+          "fma": "FMA32519",
+          "kind": "muscle",
+          "label": "Shoulder lifting muscle",
+          "anatomical": "Levator scapulae",
+          "sentence": "Runs from your neck to your shoulder blade and lifts your shoulder."
+        },
+        {
+          "fma": "FMA32557",
+          "kind": "muscle",
+          "label": "Upper trapezius",
+          "anatomical": "Trapezius, upper (descending) part",
+          "sentence": "The top of the big flat muscle across your upper back. It shrugs your shoulders."
+        }
+      ],
+      "joints": [
+        {
+          "id": "c4_c5_joint",
+          "label": "Neck joint (C4–C5)",
+          "anatomical": "Joints between the C4 and C5 vertebrae",
+          "sentence": "Where two neck bones meet and move against each other.",
+          "recipe": {
+            "type": "closest",
+            "a": "FMA12522",
+            "b": "FMA12523"
+          }
+        }
+      ]
+    },
+    "upper_back": {
+      "overlay": true,
+      "structures": [
+        {
+          "fma": "FMA9165",
+          "kind": "bone",
+          "label": "Upper back bone T1",
+          "anatomical": "First thoracic vertebra",
+          "sentence": "One of the twelve back bones your ribs attach to."
+        },
+        {
+          "fma": "FMA9187",
+          "kind": "bone",
+          "label": "Upper back bone T2",
+          "anatomical": "Second thoracic vertebra",
+          "sentence": "One of the twelve back bones your ribs attach to."
+        },
+        {
+          "fma": "FMA9209",
+          "kind": "bone",
+          "label": "Upper back bone T3",
+          "anatomical": "Third thoracic vertebra",
+          "sentence": "One of the twelve back bones your ribs attach to."
+        },
+        {
+          "fma": "FMA9248",
+          "kind": "bone",
+          "label": "Upper back bone T4",
+          "anatomical": "Fourth thoracic vertebra",
+          "sentence": "One of the twelve back bones your ribs attach to."
+        },
+        {
+          "fma": "FMA9922",
+          "kind": "bone",
+          "label": "Upper back bone T5",
+          "anatomical": "Fifth thoracic vertebra",
+          "sentence": "One of the twelve back bones your ribs attach to."
+        },
+        {
+          "fma": "FMA9945",
+          "kind": "bone",
+          "label": "Upper back bone T6",
+          "anatomical": "Sixth thoracic vertebra",
+          "sentence": "One of the twelve back bones your ribs attach to."
+        },
+        {
+          "fma": "FMA9968",
+          "kind": "bone",
+          "label": "Upper back bone T7",
+          "anatomical": "Seventh thoracic vertebra",
+          "sentence": "One of the twelve back bones your ribs attach to."
+        },
+        {
+          "fma": "FMA9991",
+          "kind": "bone",
+          "label": "Upper back bone T8",
+          "anatomical": "Eighth thoracic vertebra",
+          "sentence": "One of the twelve back bones your ribs attach to."
+        },
+        {
+          "fma": "FMA10014",
+          "kind": "bone",
+          "label": "Upper back bone T9",
+          "anatomical": "Ninth thoracic vertebra",
+          "sentence": "One of the twelve back bones your ribs attach to."
+        },
+        {
+          "fma": "FMA10037",
+          "kind": "bone",
+          "label": "Upper back bone T10",
+          "anatomical": "Tenth thoracic vertebra",
+          "sentence": "One of the twelve back bones your ribs attach to."
+        },
+        {
+          "fma": "FMA10059",
+          "kind": "bone",
+          "label": "Upper back bone T11",
+          "anatomical": "Eleventh thoracic vertebra",
+          "sentence": "One of the twelve back bones your ribs attach to."
+        },
+        {
+          "fma": "FMA10081",
+          "kind": "bone",
+          "label": "Upper back bone T12",
+          "anatomical": "Twelfth thoracic vertebra",
+          "sentence": "One of the twelve back bones your ribs attach to."
+        },
+        {
+          "fma": "FMA10455",
+          "kind": "disc",
+          "label": "Upper back discs",
+          "anatomical": "Thoracic intervertebral discs",
+          "sentence": "Soft cushions between the upper back bones."
+        },
+        {
+          "fma": "FMA13379",
+          "kind": "muscle",
+          "label": "Shoulder blade squeezing muscle",
+          "anatomical": "Rhomboid major",
+          "sentence": "Pulls your shoulder blades toward your spine."
+        },
+        {
+          "fma": "FMA13380",
+          "kind": "muscle",
+          "label": "Small shoulder blade muscle",
+          "anatomical": "Rhomboid minor",
+          "sentence": "Helps pull your shoulder blades toward your spine."
+        },
+        {
+          "fma": "FMA32556",
+          "kind": "muscle",
+          "label": "Middle trapezius",
+          "anatomical": "Trapezius, middle (transverse) part",
+          "sentence": "The middle of the big flat muscle across your upper back. It pulls your shoulders back."
+        },
+        {
+          "fma": "FMA32555",
+          "kind": "muscle",
+          "label": "Lower trapezius",
+          "anatomical": "Trapezius, lower (ascending) part",
+          "sentence": "The lower part of the big flat muscle across your upper back. It draws your shoulder blades down."
+        },
+        {
+          "fma": "FMA22709",
+          "kind": "muscle",
+          "label": "Long back muscle",
+          "anatomical": "Longissimus thoracis",
+          "sentence": "A long muscle along your spine that keeps you upright and lets you lean back."
+        }
+      ],
+      "joints": [
+        {
+          "id": "t6_t7_joint",
+          "label": "Upper back joint (T6–T7)",
+          "anatomical": "Joints between the T6 and T7 vertebrae",
+          "sentence": "Where two upper back bones meet.",
+          "recipe": {
+            "type": "closest",
+            "a": "FMA9945",
+            "b": "FMA9968"
+          }
+        }
+      ]
+    },
+    "lower_back": {
+      "overlay": true,
+      "structures": [
+        {
+          "fma": "FMA13072",
+          "kind": "bone",
+          "label": "Lower back bone L1",
+          "anatomical": "First lumbar vertebra",
+          "sentence": "One of the five large bones of your lower back. They carry most of your body's weight."
+        },
+        {
+          "fma": "FMA13073",
+          "kind": "bone",
+          "label": "Lower back bone L2",
+          "anatomical": "Second lumbar vertebra",
+          "sentence": "One of the five large bones of your lower back. They carry most of your body's weight."
+        },
+        {
+          "fma": "FMA13074",
+          "kind": "bone",
+          "label": "Lower back bone L3",
+          "anatomical": "Third lumbar vertebra",
+          "sentence": "One of the five large bones of your lower back. They carry most of your body's weight."
+        },
+        {
+          "fma": "FMA13075",
+          "kind": "bone",
+          "label": "Lower back bone L4",
+          "anatomical": "Fourth lumbar vertebra",
+          "sentence": "One of the five large bones of your lower back. They carry most of your body's weight."
+        },
+        {
+          "fma": "FMA13076",
+          "kind": "bone",
+          "label": "Lower back bone L5",
+          "anatomical": "Fifth lumbar vertebra",
+          "sentence": "One of the five large bones of your lower back. They carry most of your body's weight."
+        },
+        {
+          "fma": "FMA16202",
+          "kind": "bone",
+          "label": "Base of the spine",
+          "anatomical": "Sacrum",
+          "sentence": "The triangle-shaped bone at the base of your spine, between your hip bones."
+        },
+        {
+          "fma": "FMA16585",
+          "kind": "bone",
+          "label": "Hip bones",
+          "anatomical": "Hip bones (pelvis)",
+          "sentence": "The two large bones that form your pelvis. Your spine and legs attach to them."
+        },
+        {
+          "fma": "FMA13894",
+          "kind": "disc",
+          "label": "Lower back discs",
+          "anatomical": "Lumbar intervertebral discs",
+          "sentence": "Thick cushions between the lower back bones that absorb shock when you move."
+        },
+        {
+          "fma": "FMA22702",
+          "kind": "muscle",
+          "label": "Lower back muscle",
+          "anatomical": "Iliocostalis lumborum",
+          "sentence": "A long muscle beside your spine that straightens and steadies your lower back."
+        },
+        {
+          "fma": "FMA18060",
+          "kind": "muscle",
+          "label": "Deep hip flexor",
+          "anatomical": "Psoas major",
+          "sentence": "A deep muscle from your lower spine to your thigh. It lifts your leg and steadies your spine."
+        }
+      ],
+      "joints": [
+        {
+          "id": "l4_l5_joint",
+          "label": "Lower back joint (L4–L5)",
+          "anatomical": "Joints between the L4 and L5 vertebrae",
+          "sentence": "Where two lower back bones meet. This level does a lot of the bending.",
+          "recipe": {
+            "type": "closest",
+            "a": "FMA13075",
+            "b": "FMA13076"
+          }
+        }
+      ]
+    },
+    "left_knee": {
+      "overlay": true,
+      "structures": [
+        {
+          "fma": "FMA24475",
+          "kind": "bone",
+          "label": "Thigh bone",
+          "anatomical": "Femur",
+          "sentence": "The long bone of your thigh, the strongest bone in your body."
+        },
+        {
+          "fma": "FMA24478",
+          "kind": "bone",
+          "label": "Shin bone",
+          "anatomical": "Tibia",
+          "sentence": "The main bone of your lower leg. It carries your weight down to your ankle."
+        },
+        {
+          "fma": "FMA24481",
+          "kind": "bone",
+          "label": "Thin lower leg bone",
+          "anatomical": "Fibula",
+          "sentence": "The thin bone beside your shin bone. Muscles attach to it."
+        },
+        {
+          "fma": "FMA24487",
+          "kind": "bone",
+          "label": "Kneecap",
+          "anatomical": "Patella",
+          "sentence": "The small bone at the front of your knee. It helps your thigh muscle straighten your leg."
+        },
+        {
+          "fma": "FMA38929",
+          "kind": "muscle",
+          "label": "Front thigh muscle (middle)",
+          "anatomical": "Rectus femoris (quadriceps)",
+          "sentence": "The middle front thigh muscle. It straightens your knee and lifts your leg."
+        },
+        {
+          "fma": "FMA38931",
+          "kind": "muscle",
+          "label": "Outer thigh muscle",
+          "anatomical": "Vastus lateralis (quadriceps)",
+          "sentence": "The outer front thigh muscle. It straightens your knee."
+        },
+        {
+          "fma": "FMA38933",
+          "kind": "muscle",
+          "label": "Inner thigh muscle above the knee",
+          "anatomical": "Vastus medialis (quadriceps)",
+          "sentence": "The teardrop-shaped muscle above the inside of your knee. It straightens your knee and steadies the kneecap."
+        },
+        {
+          "fma": "FMA45889",
+          "kind": "muscle",
+          "label": "Outer hamstring",
+          "anatomical": "Biceps femoris, long head (hamstring)",
+          "sentence": "A back thigh muscle that bends your knee."
+        },
+        {
+          "fma": "FMA22359",
+          "kind": "muscle",
+          "label": "Inner hamstring",
+          "anatomical": "Semitendinosus (hamstring)",
+          "sentence": "A back thigh muscle that bends your knee."
+        },
+        {
+          "fma": "FMA45958",
+          "kind": "muscle",
+          "label": "Inner calf muscle",
+          "anatomical": "Gastrocnemius, medial head",
+          "sentence": "The inner part of your calf. It points your foot and helps bend your knee."
+        },
+        {
+          "fma": "FMA45961",
+          "kind": "muscle",
+          "label": "Outer calf muscle",
+          "anatomical": "Gastrocnemius, lateral head",
+          "sentence": "The outer part of your calf. It points your foot and helps bend your knee."
+        }
+      ],
+      "joints": [
+        {
+          "id": "left_knee_joint",
+          "label": "Knee joint",
+          "anatomical": "Tibiofemoral joint",
+          "sentence": "The hinge where your thigh bone meets your shin bone.",
+          "recipe": {
+            "type": "closest",
+            "a": "FMA24475",
+            "b": "FMA24478"
+          }
+        },
+        {
+          "id": "left_patellofemoral_joint",
+          "label": "Kneecap joint",
+          "anatomical": "Patellofemoral joint",
+          "sentence": "Where your kneecap glides over the front of your thigh bone.",
+          "recipe": {
+            "type": "closest",
+            "a": "FMA24487",
+            "b": "FMA24475"
+          }
+        }
+      ]
+    },
+    "left_leg": {
+      "overlay": true,
+      "structures": [
+        {
+          "fma": "FMA16587",
+          "kind": "bone",
+          "label": "Hip bone",
+          "anatomical": "Left hip bone (pelvis)",
+          "sentence": "The large bone on the side of your pelvis. Your thigh bone fits into its socket."
+        },
+        {
+          "fma": "FMA24475",
+          "kind": "bone",
+          "label": "Thigh bone",
+          "anatomical": "Femur",
+          "sentence": "The long bone of your thigh, the strongest bone in your body."
+        },
+        {
+          "fma": "FMA24478",
+          "kind": "bone",
+          "label": "Shin bone",
+          "anatomical": "Tibia",
+          "sentence": "The main bone of your lower leg. It carries your weight down to your ankle."
+        },
+        {
+          "fma": "FMA24481",
+          "kind": "bone",
+          "label": "Thin lower leg bone",
+          "anatomical": "Fibula",
+          "sentence": "The thin bone beside your shin bone. Muscles attach to it."
+        },
+        {
+          "fma": "FMA24487",
+          "kind": "bone",
+          "label": "Kneecap",
+          "anatomical": "Patella",
+          "sentence": "The small bone at the front of your knee. It helps your thigh muscle straighten your leg."
+        },
+        {
+          "fma": "FMA38929",
+          "kind": "muscle",
+          "label": "Front thigh muscle (middle)",
+          "anatomical": "Rectus femoris (quadriceps)",
+          "sentence": "The middle front thigh muscle. It straightens your knee and lifts your leg."
+        },
+        {
+          "fma": "FMA38931",
+          "kind": "muscle",
+          "label": "Outer thigh muscle",
+          "anatomical": "Vastus lateralis (quadriceps)",
+          "sentence": "The outer front thigh muscle. It straightens your knee."
+        },
+        {
+          "fma": "FMA38933",
+          "kind": "muscle",
+          "label": "Inner thigh muscle above the knee",
+          "anatomical": "Vastus medialis (quadriceps)",
+          "sentence": "The teardrop-shaped muscle above the inside of your knee. It straightens your knee and steadies the kneecap."
+        },
+        {
+          "fma": "FMA45889",
+          "kind": "muscle",
+          "label": "Outer hamstring",
+          "anatomical": "Biceps femoris, long head (hamstring)",
+          "sentence": "A back thigh muscle that bends your knee."
+        },
+        {
+          "fma": "FMA22359",
+          "kind": "muscle",
+          "label": "Inner hamstring",
+          "anatomical": "Semitendinosus (hamstring)",
+          "sentence": "A back thigh muscle that bends your knee."
+        },
+        {
+          "fma": "FMA45958",
+          "kind": "muscle",
+          "label": "Inner calf muscle",
+          "anatomical": "Gastrocnemius, medial head",
+          "sentence": "The inner part of your calf. It points your foot and helps bend your knee."
+        },
+        {
+          "fma": "FMA45961",
+          "kind": "muscle",
+          "label": "Outer calf muscle",
+          "anatomical": "Gastrocnemius, lateral head",
+          "sentence": "The outer part of your calf. It points your foot and helps bend your knee."
+        },
+        {
+          "fma": "FMA22559",
+          "kind": "muscle",
+          "label": "Deep calf muscle",
+          "anatomical": "Soleus",
+          "sentence": "The flat calf muscle under the gastrocnemius. It keeps you steady when you stand."
+        },
+        {
+          "fma": "FMA22329",
+          "kind": "muscle",
+          "label": "Buttock muscle",
+          "anatomical": "Gluteus maximus",
+          "sentence": "The big muscle of your buttock. It straightens your hip when you stand up or climb."
+        },
+        {
+          "fma": "FMA22331",
+          "kind": "muscle",
+          "label": "Side hip muscle",
+          "anatomical": "Gluteus medius",
+          "sentence": "On the side of your hip. It keeps your pelvis level when you stand on one leg."
+        }
+      ],
+      "joints": [
+        {
+          "id": "left_hip_joint",
+          "label": "Hip joint",
+          "anatomical": "Hip joint (ball and socket)",
+          "sentence": "The ball-and-socket joint: the top of your thigh bone sits in your hip bone's socket.",
+          "recipe": {
+            "type": "closest",
+            "a": "FMA24475",
+            "b": "FMA16587",
+            "aTop": 0.08
+          }
+        },
+        {
+          "id": "left_knee_joint",
+          "label": "Knee joint",
+          "anatomical": "Tibiofemoral joint",
+          "sentence": "The hinge where your thigh bone meets your shin bone.",
+          "recipe": {
+            "type": "closest",
+            "a": "FMA24475",
+            "b": "FMA24478"
+          }
+        }
+      ]
+    },
+    "head": {
+      "overlay": true,
+      "structures": [
+        {
+          "fma": "FMA52734",
+          "kind": "bone",
+          "label": "Forehead bone",
+          "anatomical": "Frontal bone",
+          "sentence": "The bone of your forehead and the front of your skull."
+        },
+        {
+          "fma": "FMA9613",
+          "kind": "bone",
+          "label": "Top of the skull",
+          "anatomical": "Parietal bones",
+          "sentence": "The two bones that form the top and sides of your skull."
+        },
+        {
+          "fma": "FMA52735",
+          "kind": "bone",
+          "label": "Back of the skull",
+          "anatomical": "Occipital bone",
+          "sentence": "The bone at the back and base of your skull. Neck muscles attach to it."
+        },
+        {
+          "fma": "FMA52737",
+          "kind": "bone",
+          "label": "Side of the skull",
+          "anatomical": "Temporal bones",
+          "sentence": "The bones on the sides of your skull, around your ears. Your jaw hinges on them."
+        },
+        {
+          "fma": "FMA52736",
+          "kind": "bone",
+          "label": "Middle of the skull base",
+          "anatomical": "Sphenoid bone",
+          "sentence": "A butterfly-shaped bone in the middle of your skull base, behind your eyes."
+        },
+        {
+          "fma": "FMA9711",
+          "kind": "bone",
+          "label": "Upper jaw",
+          "anatomical": "Maxilla",
+          "sentence": "Your upper jaw. It holds your upper teeth."
+        },
+        {
+          "fma": "FMA52748",
+          "kind": "bone",
+          "label": "Lower jaw",
+          "anatomical": "Mandible",
+          "sentence": "Your lower jaw. It moves when you talk and chew."
+        },
+        {
+          "fma": "FMA22830",
+          "kind": "muscle",
+          "label": "Deep back of the head muscle",
+          "anatomical": "Semispinalis capitis",
+          "sentence": "A muscle from your upper back to the base of your skull. It holds your head up."
+        },
+        {
+          "fma": "FMA22653",
+          "kind": "muscle",
+          "label": "Back of the neck muscle",
+          "anatomical": "Splenius capitis",
+          "sentence": "A muscle at the back of your neck that tips your head back and turns it."
+        }
+      ],
+      "joints": [
+        {
+          "id": "jaw_joint",
+          "label": "Jaw joint",
+          "anatomical": "Temporomandibular joint (TMJ)",
+          "sentence": "Where your lower jaw hinges on your skull, just in front of your ear.",
+          "recipe": {
+            "type": "closest",
+            "a": "FMA52748",
+            "b": "FMA52737"
+          }
+        }
+      ]
+    }
+  }
+}
