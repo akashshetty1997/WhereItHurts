@@ -1,0 +1,20 @@
+/* Login / register screen. Colors follow src/index.css. */
+.auth { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+.auth-card { width: 100%; max-width: 380px; display: grid; gap: 0.9rem; padding: 1.6rem; border: 1px solid #30363d; border-radius: 12px; background: #0f141b; }
+.auth-card h1 { margin: 0; }
+.auth-tagline { margin: -0.6rem 0 0.2rem; color: #8b949e; font-size: 0.9rem; }
+.auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+.auth-tabs button[aria-selected='true'] { border-color: #4fc3f7; color: #4fc3f7; }
+.auth-card label { display: grid; gap: 0.3rem; font-size: 0.85rem; color: #8b949e; }
+.auth-card input:not([type='radio']) { font: inherit; padding: 0.55rem 0.7rem; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: #e6edf3; }
+.auth-card input:focus-visible { outline: 2px solid #4fc3f7; outline-offset: 1px; }
+.auth-card small { color: #6e7681; }
+.auth-roles { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; border: 0; padding: 0; margin: 0; }
+.auth-roles legend { font-size: 0.85rem; color: #8b949e; margin-bottom: 0.3rem; }
+.auth-roles label { display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 0.7rem; border: 1px solid #30363d; border-radius: 8px; color: #e6edf3; cursor: pointer; }
+.auth-roles label.on { border-color: #ffb74d; color: #ffb74d; }
+.auth-submit { background: #4fc3f7; color: #0d1117; border-color: #4fc3f7; font-weight: 600; }
+.auth-note { margin: 0; font-size: 0.75rem; color: #6e7681; text-align: center; }
+.auth-card label.auth-test-mode { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.6rem 0.7rem; border: 1px dashed #30363d; border-radius: 8px; color: #e6edf3; cursor: pointer; }
+.auth-test-mode input { margin-top: 0.2rem; accent-color: #4fc3f7; }
+.auth-test-mode span { display: grid; gap: 0.15rem; }

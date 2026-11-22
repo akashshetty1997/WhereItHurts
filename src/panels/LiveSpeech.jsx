@@ -1,7 +1,9 @@
 // Hold-to-talk panel for the visit: hold PT or Patient (or the T / P key) while speaking.
 // Each sentence -> /api/extract -> visitStore.addSegment, which lights the body.
+// Only the logged-in user's role gets a button; "Test mode" shows both, for testing alone.
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { useUser } from '@/auth/userContext'
 import { cn } from '@/lib/utils'
 import { visitStore } from '../visitStore'
 import { SPEECH_SUPPORTED, extract, listen } from './speech'
@@ -18,6 +20,11 @@ const ERRORS = {
 }
 
 export default function LiveSpeech() {
+  const { user, testMode, setTestMode } = useUser()
+  // Logged-in role only, unless test mode is on (or nobody is logged in).
+  const speakers = testMode || !user ? SPEAKERS : SPEAKERS.filter((sp) => sp.id === user.role)
+  const allowed = useRef(speakers)
+  allowed.current = speakers
   const [talking, setTalking] = useState(null) // speaker id while a button is held
   const [interim, setInterim] = useState('')
   const [pending, setPending] = useState([]) // sentences waiting for /api/extract
@@ -88,7 +95,7 @@ export default function LiveSpeech() {
   useEffect(() => {
     const typing = (e) => e.target.closest?.('input, textarea, [contenteditable="true"]')
     const down = (e) => {
-      const s = SPEAKERS.find((sp) => sp.key === e.key.toLowerCase())
+      const s = allowed.current.find((sp) => sp.key === e.key.toLowerCase())
       if (s && !e.repeat && !typing(e)) press(s.id)
     }
     const up = (e) => {
@@ -109,8 +116,8 @@ export default function LiveSpeech() {
 
   return (
     <section className="space-y-2" aria-label="Hold to talk">
-      <div className="grid grid-cols-2 gap-2">
-        {SPEAKERS.map((s) => {
+      <div className={cn('grid gap-2', speakers.length > 1 ? 'grid-cols-2' : 'grid-cols-1')}>
+        {speakers.map((s) => {
           const on = talking === s.id
           return (
             <Button
@@ -134,6 +141,15 @@ export default function LiveSpeech() {
           )
         })}
       </div>
+      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+        <input
+          type="checkbox"
+          checked={testMode}
+          onChange={(e) => setTestMode(e.target.checked)}
+          className="accent-current"
+        />
+        Test mode: show both speakers
+      </label>
       {interim && <Line speaker={talking}>{interim}</Line>}
       {pending.map((line) => (
         <Line key={line.id} speaker={line.speaker}>

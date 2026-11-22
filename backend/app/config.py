@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     models_dir: Path = BACKEND_DIR / "models"
     # Where an MP4 that can't be read from a pipe goes briefly. None: the system temp folder.
     transcribe_tmp_dir: str | None = None
+    # SQLite file for demo accounts and sessions (gitignored).
+    users_db_path: Path = BACKEND_DIR / "data" / "users.db"
 
 
 @lru_cache

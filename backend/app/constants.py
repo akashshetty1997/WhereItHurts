@@ -85,6 +85,22 @@ FOLLOW_UP_WORDS = ("follow-up", "follow up", "come back", "schedule")
 PT_TERMS_FILE = "pt_terms.csv"
 PT_TERMS_ALIAS_SEPARATOR = "|"
 
+# --- Accounts (demo login/register) --------------------------------------------------------
+
+USER_ROLES = ("patient", "pt")  # pt = the physical therapist
+NAME_MAX_CHARS = 80
+EMAIL_MAX_CHARS = 254
+PASSWORD_MIN_CHARS = 8
+PASSWORD_MAX_CHARS = 128
+# scrypt password hashing (Python's hashlib, no extra dependency).
+SCRYPT_N = 2**14
+SCRYPT_R = 8
+SCRYPT_P = 1
+SCRYPT_KEY_BYTES = 32
+SALT_BYTES = 16
+SESSION_TOKEN_BYTES = 32
+AUTH_SCHEME = "Bearer"
+
 # --- Audio input -----------------------------------------------------------------------------
 
 SAMPLE_RATE = 16000
