@@ -1,30 +1,40 @@
-// Speech, hands-free by default.
-//   prep  (mode 'paint'): PrepListen, the patient talks to mark pain and set the goal
-//   visit (mode 'visit'): LiveListen, both voices enrolled, then every sentence is labelled
-// Testing mode, or hands-free failing (no mic, server off), falls back to holding a button:
-// HoldToTalk during the visit, and the hold-to-speak buttons on the body parts during prep.
+// Speech, recorded with one click (no holding):
+//   prep  (mode 'paint'): PrepListen, Record Your Prep: the patient talks to mark pain and set the goal
+//   visit (mode 'visit'): LiveListen, Record the Visit: both voices learned, then every line labelled
+// If the mic or the server isn't available, it says so and offers to try again.
 import { useState } from 'react'
-import { useUser } from '@/auth/userContext'
-import HoldToTalk from './HoldToTalk'
+import { RotateCcw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import LiveListen from './LiveListen'
 import PrepListen from './PrepListen'
 
 export default function LiveSpeech({ mode = 'visit' }) {
-  const { testMode } = useUser()
   const [failure, setFailure] = useState(null)
+  const [attempt, setAttempt] = useState(0) // remounts the recorder on "Try Again"
   const prep = mode === 'paint'
 
-  if (testMode || failure) {
+  if (failure) {
     return (
-      <div className="space-y-2">
-        {failure && (
-          <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive ring-1 ring-destructive/50">
-            {failure} {prep ? 'Use hold to speak on each body part instead.' : 'Using hold-to-talk instead.'}
-          </p>
-        )}
-        {!prep && <HoldToTalk />}
+      <div className="space-y-2 rounded-xl bg-destructive/10 p-3 ring-1 ring-destructive/50">
+        <p className="text-sm text-destructive">{failure}</p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={() => {
+            setFailure(null)
+            setAttempt((n) => n + 1)
+          }}
+        >
+          <RotateCcw className="size-4" aria-hidden />
+          Try Again
+        </Button>
       </div>
     )
   }
-  return prep ? <PrepListen key="prep" onFail={setFailure} /> : <LiveListen key="visit" onFail={setFailure} />
+  return prep ? (
+    <PrepListen key={`prep-${attempt}`} onFail={setFailure} />
+  ) : (
+    <LiveListen key={`visit-${attempt}`} onFail={setFailure} />
+  )
 }

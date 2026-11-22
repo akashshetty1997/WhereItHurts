@@ -115,7 +115,16 @@ def test_movement_instructions_are_not_mentions(text: str, regions: list[str]) -
         ("I want to be able to put plates on the top shelf.", "Put plates on the top shelf"),
         ("My goal is to play with my kids again", "Play with my kids again"),
         ("I'd like to sleep through the night", "Sleep through the night"),
+        ("Want to be able to put plates on the top shelf.", "Put plates on the top shelf"),
+        ("So um I want to garden again", "Garden again"),
+        ("I hope to run a 5k", "Run a 5k"),
         ("My right shoulder aches, about a five.", None),
+        ("It hurts when I want to lift my arm", None),
+        (
+            "My right shoulder aches, about a five. "
+            "I want to be able to put plates on the top shelf.",
+            "Put plates on the top shelf",
+        ),
     ],
 )
 def test_goals(text: str, goal: str | None) -> None:

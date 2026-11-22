@@ -103,21 +103,25 @@ PAIN_TYPE_WORDS: dict[str, tuple[str, ...]] = {
     "sharp": ("sharp", "stabbing", "shooting", "stabs", "pins and needles"),
     "aching": ("aching", "aches", "ache", "achy", "dull", "throbbing", "sore"),
 }
-# The patient's goal during prep ("I want to be able to put plates on the top shelf").
-# The words after the longest matching lead become the goal.
+# The patient's goal during prep ("I want to be able to put plates on the top shelf"). A goal
+# starts the sentence: these leads, after up to a few filler words ("so", "um", "I"), since
+# speech-to-text often drops the "I". The words after the lead become the goal.
 GOAL_LEADS = (
-    "i want to be able to",
-    "i'd like to be able to",
-    "i would like to be able to",
-    "i wish i could",
+    "want to be able to",
+    "would like to be able to",
+    "'d like to be able to",
+    "like to be able to",
+    "want to get back to",
+    "wish i could",
     "my goal is to",
     "my goal is",
-    "i want to",
-    "i'd like to",
-    "i would like to",
-    "i'd love to",
-    "i want to get back to",
+    "want to",
+    "would like to",
+    "'d like to",
+    "'d love to",
+    "hope to",
 )
+GOAL_FILLERS = ("and", "so", "well", "um", "uh", "also", "really", "i", "i'd", "i'm", "just")
 # Spoken pain ratings: "five out of ten", "about a five", "maybe a 2".
 RATING_MIN = 0
 RATING_MAX = 10
@@ -184,6 +188,11 @@ LIVE_MIN_ENROLL_S = 1.0
 LIVE_SURE_SIMILARITY = 0.5
 LIVE_VAD_BUFFER_S = 30
 LIVE_MODE_PREP = "prep"  # /api/live?mode=prep: before the visit, only the patient talks
+# Sent as `context` to /api/extract/smart for prep sentences keywords can't place.
+PREP_CONTEXT = (
+    "Before the visit: the patient describes where it hurts "
+    "or what they want to be able to do again."
+)
 
 # --- Speech-to-text models (files live in MODELS_DIR, see backend/README.md) -----------------
 

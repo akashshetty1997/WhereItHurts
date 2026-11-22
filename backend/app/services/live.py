@@ -3,8 +3,10 @@ with who said it, with the body regions it mentions.
 
 - Segmenter: cuts the stream into sentences at pauses (Silero VAD, streaming).
 - LiveSession: two-step enrollment ("PT, say a sentence", "Patient, say a sentence") stores a
-  voice print for each; after that every sentence is transcribed, matched to the closer voice
-  and run through the instant keyword extraction. In prep mode only the patient talks, so
+  voice print for each. After that each clip is transcribed with word times and cut into
+  sentences, and every sentence is matched to the closer voice: an answer that follows a question
+  with no pause still gets its own speaker. Consecutive sentences by one voice become one line,
+  run through the instant keyword extraction. In prep mode only the patient talks, so
   there's no enrollment, and the region the patient tapped (if any) is used as a hint.
 
 Audio and text are never logged; logs hold durations and counts only.
@@ -30,6 +32,7 @@ from app.constants import (
 )
 from app.schemas.extract import ExtractRequest
 from app.services.extraction import extract_fast
+from app.services.transcription.diarize import Word, sentences
 
 _logger = logging.getLogger("whereithurts.live")
 
@@ -89,24 +92,24 @@ class Segmenter:
 
 
 class LiveSession:
-    """Enrollment, then one event per sentence. `text_of` and `voice_of` come from
+    """Enrollment, then events per clip. `words_of` and `voice_of` come from
     TranscriptionService (or fakes in tests); this class holds no models itself."""
 
     def __init__(
         self,
-        text_of: Callable[[np.ndarray], str],
-        voice_of: Callable[[np.ndarray], np.ndarray],
+        words_of: Callable[[np.ndarray], list[Word]],
+        voice_of: Callable[[np.ndarray, float, float], np.ndarray],
         single_speaker: str | None = None,
     ) -> None:
-        self._text_of = text_of
+        self._words_of = words_of
         self._voice_of = voice_of
+        self.voices: dict[str, np.ndarray] = {}
+        self._enrolling: str | None = None
+        self._count = 0
         # Prep: everything heard is this speaker; no voice prints needed.
         self.single_speaker = single_speaker
         # The region the patient last tapped (prep); a sentence with no body part describes it.
         self.region_hint: str | None = None
-        self.voices: dict[str, np.ndarray] = {}
-        self._enrolling: str | None = None
-        self._count = 0
 
     @property
     def ready(self) -> bool:
@@ -125,31 +128,51 @@ class LiveSession:
         self._enrolling = speaker
         return {"type": "enrolling", "speaker": speaker}
 
-    def handle(self, utterance: Utterance) -> dict | None:
-        """One finished sentence -> an event for the browser, or None to say nothing."""
+    def handle(self, utterance: Utterance) -> list[dict]:
+        """One clip (speech up to a pause) -> events for the browser: usually one line, two or
+        more when the speaker changes inside the clip, none for a cough or silence."""
         if utterance.seconds < LIVE_MIN_SPEECH_S:
-            return None
+            return []
         if self._enrolling:
-            return self._enroll(utterance)
+            return [self._enroll(utterance)]
         if not self.ready:
-            return None  # sound before both voices are known isn't attributed to anyone
-        text = self._text_of(utterance.samples)[:MAX_SENTENCE_CHARS]
-        if not text:
-            return None
+            return []  # sound before both voices are known isn't attributed to anyone
+        words = self._words_of(utterance.samples)
+        if not words:
+            return []
+        return [
+            self._line(utterance, speaker, sure, part)
+            for speaker, sure, part in self._turns(utterance, words)
+        ]
+
+    def _turns(self, utterance: Utterance, words: list[Word]) -> list[tuple[str, bool, list[Word]]]:
+        """Each sentence goes to the closer voice; consecutive sentences by one voice merge."""
         if self.single_speaker:
-            speaker, similarity = self.single_speaker, {self.single_speaker: 1.0}
-        else:
-            voice = self._voice_of(utterance.samples)
+            return [(self.single_speaker, True, words)]
+        turns: list[tuple[str, bool, list[Word]]] = []
+        for part in sentences(words):
+            voice = self._voice_of(utterance.samples, part[0].start, part[-1].end)
             similarity = {role: float(self.voices[role] @ voice) for role in SPEAKER_ROLES}
             speaker = max(similarity, key=similarity.get)
+            sure = similarity[speaker] >= LIVE_SURE_SIMILARITY
+            if turns and turns[-1][0] == speaker:
+                previous = turns.pop()
+                turns.append((speaker, previous[1] and sure, previous[2] + part))
+            else:
+                turns.append((speaker, sure, list(part)))
+        return turns
+
+    def _line(self, utterance: Utterance, speaker: str, sure: bool, words: list[Word]) -> dict:
+        text = "".join(w.text for w in words).strip()[:MAX_SENTENCE_CHARS]
         hint = self.region_hint if self.single_speaker else None
         found = extract_fast(ExtractRequest(text=text, speaker=speaker, region=hint))
         self._count += 1
+        start, end = utterance.start + words[0].start, utterance.start + words[-1].end
         _logger.info(
-            "live_segment n=%d seconds=%.1f similarity=%.2f regions=%d",
+            "live_segment n=%d seconds=%.1f sure=%s regions=%d",
             self._count,
-            utterance.seconds,
-            similarity[speaker],
+            end - start,
+            sure,
             len(found.regions),
         )
         return {
@@ -157,21 +180,21 @@ class LiveSession:
             "segment": {
                 "id": f"live-{self._count}",
                 "speaker": speaker,
-                "start": round(utterance.start, 2),
-                "end": round(utterance.start + utterance.seconds, 2),
+                "start": round(start, 2),
+                "end": round(end, 2),
                 "text": text,
                 "regions": found.regions,
                 "path": found.path,
             },
             "extraction": found.model_dump(),
-            "sure": similarity[speaker] >= LIVE_SURE_SIMILARITY,
+            "sure": sure,
         }
 
     def _enroll(self, utterance: Utterance) -> dict:
         speaker = self._enrolling
         if utterance.seconds < LIVE_MIN_ENROLL_S:
             return {"type": "enroll_retry", "speaker": speaker, "reason": "too_short"}
-        self.voices[speaker] = self._voice_of(utterance.samples)
+        self.voices[speaker] = self._voice_of(utterance.samples, 0.0, utterance.seconds)
         self._enrolling = None
         _logger.info("live_enrolled speaker=%s seconds=%.1f", speaker, utterance.seconds)
         return {"type": "enrolled", "speaker": speaker, "ready": self.ready}

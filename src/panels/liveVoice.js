@@ -6,7 +6,7 @@
 
 export const LIVE_SAMPLE_RATE = 16000
 const CHUNK_SAMPLES = 1600 // 100 ms
-export const FLUSH_WAIT_MS = 1500 // on stop, how long to wait for the last sentence
+export const FLUSH_WAIT_MS = 3000 // on stop, how long to wait for the last sentence (a long one takes ~1-2 s)
 
 const WORKLET = `
 class PcmSender extends AudioWorkletProcessor {
@@ -35,7 +35,8 @@ function liveUrl(mode) {
 }
 
 /**
- * Open the mic and the live connection. Returns { enroll(speaker), setRegion(region), stop() }.
+ * Open the mic and the live connection.
+ * Returns { enroll(speaker), setRegion(region), pause(), resume(), stop() }.
  * handlers.mode            'visit' (default: enroll both voices) or 'prep' (patient only)
  * handlers.onEvent(event)  every message from the server (ready, enrolling, enrolled,
  *                          enroll_retry, segment, error); see routes/live.py
@@ -58,10 +59,22 @@ export async function startLive(handlers) {
   const ws = new WebSocket(liveUrl(handlers.mode))
   ws.binaryType = 'arraybuffer'
   let waitingForLast = null
+  let paused = false
 
   sender.port.onmessage = ({ data }) => {
+    if (paused) return
     handlers.onLevel?.(Math.min(1, data.level * 6))
     if (ws.readyState === WebSocket.OPEN) ws.send(data.pcm)
+  }
+
+  // Finish the sentence being spoken and wait (briefly) for its result.
+  function flush() {
+    if (ws.readyState !== WebSocket.OPEN) return Promise.resolve()
+    ws.send(JSON.stringify({ type: 'flush' }))
+    return new Promise((resolve) => {
+      waitingForLast = resolve
+      setTimeout(resolve, FLUSH_WAIT_MS)
+    })
   }
   ws.onmessage = ({ data }) => {
     const event = JSON.parse(data)
@@ -91,16 +104,19 @@ export async function startLive(handlers) {
     setRegion(region) {
       if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'region', region }))
     },
+    /** Stop sending audio (the connection and learned voices stay); the last sentence is finished. */
+    async pause() {
+      paused = true
+      handlers.onLevel?.(0)
+      await flush()
+    },
+    resume() {
+      paused = false
+    },
     /** Finish the sentence being spoken, wait briefly for it, then close everything. */
     async stop() {
       release()
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'flush' }))
-        await new Promise((resolve) => {
-          waitingForLast = resolve
-          setTimeout(resolve, FLUSH_WAIT_MS)
-        })
-      }
+      await flush()
       ws.close()
     },
   }

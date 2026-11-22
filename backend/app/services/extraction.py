@@ -43,7 +43,7 @@ def _merge(fast: Extraction, smart: Extraction) -> Extraction:
         rating=smart.rating if smart.rating is not None else fast.rating,
         movement=smart.movement,
         pain_type=smart.pain_type or fast.pain_type,
-        goal=fast.goal,
+        goal=smart.goal or fast.goal,
     )
 
 

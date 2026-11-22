@@ -74,16 +74,16 @@ class TranscriptionService:
     def vad_model(self) -> str:
         return str(self._settings.models_dir / VAD_MODEL_FILE)
 
-    def text_of(self, samples: np.ndarray) -> str:
-        """One short clip (16 kHz mono float32) -> its words. For live listening."""
+    def words_of(self, samples: np.ndarray) -> list:
+        """One short clip (16 kHz mono float32) -> its words with times. For live listening."""
         with self._lock:
-            words = self._engine.words(samples, [])
-        return "".join(w.text for w in words).strip()
+            return self._engine.words(samples, [])
 
-    def voice_of(self, samples: np.ndarray) -> np.ndarray:
-        """One short clip -> a unit-length voice embedding, to tell speakers apart."""
+    def voice_of(self, samples: np.ndarray, start: float, end: float) -> np.ndarray:
+        """Unit-length voice embedding of samples[start:end] (seconds), to tell speakers apart.
+        Short spans are widened (see diarize.MIN_WINDOW_S)."""
         with self._lock:
-            return self._diarizer.voice(samples)
+            return self._diarizer.voice_between(samples, start, end)
 
     def transcribe(self, data: bytes, speakers: int | None, hints: list[str]) -> Transcript:
         """Raises UnreadableAudioError for audio ffmpeg can't decode."""
