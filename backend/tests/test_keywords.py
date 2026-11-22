@@ -32,3 +32,23 @@ def test_follow_up() -> None:
 def test_whole_words_only() -> None:
     assert extract_keywords("I came back yesterday").regions == ["lower_back"]
     assert extract_keywords("My kneecap feels fine").regions == []
+
+
+@pytest.mark.parametrize(
+    ("text", "regions"),
+    [
+        ("My upper back is stiff.", ["upper_back"]),
+        ("It hurts between my shoulder blades.", ["upper_back"]),
+        ("My right shoulder and my upper back ache.", ["right_shoulder", "upper_back"]),
+        ("Upper back and lower back both hurt.", ["upper_back", "lower_back"]),
+        ("The PT checked my lumbar spine.", ["lower_back"]),
+        ("Pain in my cervical spine.", ["neck"]),
+    ],
+)
+def test_spine_regions(text: str, regions: list[str]) -> None:
+    assert extract_keywords(text).regions == regions
+
+
+def test_upper_back_travels_to_lower_back() -> None:
+    result = extract_keywords("It starts in my upper back and goes down to my lower back.")
+    assert result.path == ["upper_back", "lower_back"]
