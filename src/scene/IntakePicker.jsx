@@ -27,7 +27,7 @@ export default function IntakePicker({ region, entry, listening, onClose }) {
 
   return (
     <div
-      className="absolute right-4 bottom-4 w-72 space-y-4 rounded-2xl bg-card/95 p-4 shadow-2xl ring-1 ring-foreground/10 backdrop-blur animate-in fade-in slide-in-from-bottom-2"
+      className="absolute right-4 bottom-4 w-80 space-y-4 rounded-2xl bg-card/95 p-4 shadow-2xl ring-1 ring-foreground/10 backdrop-blur animate-in fade-in slide-in-from-bottom-2"
       onPointerDown={(e) => e.stopPropagation()}
     >
       <div className="flex items-start justify-between gap-2">
@@ -37,7 +37,7 @@ export default function IntakePicker({ region, entry, listening, onClose }) {
             className={cn('mt-1 text-sm', listening ? 'animate-pulse text-patient' : 'text-muted-foreground')}
             aria-live="polite"
           >
-            {listening ? 'Listening… describe the pain' : 'Say what it feels like, or pick below'}
+            {listening ? 'Listening… describe the pain' : 'Say what it feels like, or choose below.'}
           </p>
         </div>
         <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
@@ -57,7 +57,7 @@ export default function IntakePicker({ region, entry, listening, onClose }) {
             key={t}
             value={t}
             className={cn(
-              'h-9 rounded-lg bg-secondary text-sm data-[state=on]:bg-secondary data-[state=on]:ring-2',
+              'h-10 rounded-lg bg-secondary text-base font-bold data-[state=on]:bg-secondary data-[state=on]:ring-2',
               PAIN_STYLES[t].text,
               PAIN_STYLES[t].ring,
             )}
@@ -69,7 +69,7 @@ export default function IntakePicker({ region, entry, listening, onClose }) {
 
       <div className="space-y-2">
         <div className="flex items-baseline justify-between">
-          <span className="text-sm text-muted-foreground">How bad, 0 to 10</span>
+          <span className="text-sm text-muted-foreground">How bad is it:</span>
           <span className="text-2xl font-bold tabular-nums">{entry ? intensity : '–'}</span>
         </div>
         <Slider
@@ -78,15 +78,19 @@ export default function IntakePicker({ region, entry, listening, onClose }) {
           step={1}
           value={[intensity]}
           onValueChange={([v]) => save({ intensity: v })}
-          aria-label="Pain rating"
+          aria-label="Pain rating, 0 to 10"
         />
+        <div className="flex justify-between text-sm text-muted-foreground" aria-hidden>
+          <span>0 · None</span>
+          <span>10 · Worst</span>
+        </div>
       </div>
 
       {entry?.note && <p className="text-sm italic leading-snug text-muted-foreground">“{entry.note}”</p>}
 
       {entry && (
         <Button variant="ghost" size="sm" className="text-destructive" onClick={remove}>
-          Remove this mark
+          Remove Mark
         </Button>
       )}
     </div>

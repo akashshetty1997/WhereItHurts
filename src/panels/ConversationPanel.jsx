@@ -1,3 +1,4 @@
+import { CircleAlert, CircleCheck } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { regionLabel, REGIONS } from '@/regions'
 import { toTen } from '@/scene/intensity'
@@ -15,25 +16,29 @@ export default function ConversationPanel({ visit, mode, selected, missed }) {
 
       {mode === 'ended' && (
         <section className="space-y-2" aria-label="End of visit check">
-          <h2 className="text-lg font-bold">Did everything come up?</h2>
+          <h2 className="text-xl font-bold">Did Everything Come Up?</h2>
           {missed.length === 0 ? (
-            <p className="rounded-xl bg-clear/10 p-4 text-base text-clear ring-1 ring-clear/40">
+            <p className="flex gap-3 rounded-xl bg-clear/10 p-4 text-base text-clear ring-1 ring-clear/40">
+              <CircleCheck className="mt-0.5 size-5 shrink-0" aria-hidden />
               Everything you marked came up in the visit.
             </p>
           ) : (
             missed.map((p) => (
-              <p key={p.region} className="rounded-xl bg-flag/10 p-4 text-base leading-snug ring-1 ring-flag/60">
-                You marked your <b className="text-flag">{REGIONS[p.region].toLowerCase()}</b> ({p.type},{' '}
-                {toTen(p.intensity)}/10), but nobody talked about it.
+              <p key={p.region} className="flex gap-3 rounded-xl bg-flag/10 p-4 text-base leading-snug ring-1 ring-flag/60">
+                <CircleAlert className="mt-0.5 size-5 shrink-0 text-flag" aria-hidden />
+                <span>
+                  You marked your <b className="text-flag">{REGIONS[p.region].toLowerCase()}</b> ({p.type},{' '}
+                  {toTen(p.intensity)}/10), but nobody talked about it.
+                </span>
               </p>
             ))
           )}
         </section>
       )}
 
-      {selected && (
+      {selected && mode !== 'paint' && (
         <section className="space-y-2 rounded-xl bg-secondary/60 p-4" aria-label="Mentions of the selected region">
-          <h2 className="font-bold">{regionLabel(selected)}</h2>
+          <h2 className="font-bold">What was said about the {regionLabel(selected).toLowerCase()}</h2>
           {mentions.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nobody has talked about this yet.</p>
           ) : (
@@ -49,10 +54,14 @@ export default function ConversationPanel({ visit, mode, selected, missed }) {
         </section>
       )}
 
-      <h2 className="text-lg font-bold">Conversation</h2>
+      <h2 className="text-xl font-bold">Conversation</h2>
       <ScrollArea className="-mx-1 min-h-0 flex-1 px-1">
         {visit.segments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Lines appear here as the PT and patient talk.</p>
+          <p className="text-sm leading-snug text-muted-foreground">
+            {mode === 'paint'
+              ? 'After you click Start Visit, everything the PT and patient say appears here.'
+              : 'Hold a talk button and speak. Each line appears here.'}
+          </p>
         ) : (
           <ol className="space-y-3">
             {visit.segments.map((s) => (

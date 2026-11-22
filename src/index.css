@@ -113,6 +113,8 @@
     }
   html {
     @apply font-sans;
+    /* Projector legibility: 17 px base (Apple's default body size); every rem scales with it. */
+    font-size: 17px;
     }
 }
 

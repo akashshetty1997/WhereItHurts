@@ -134,21 +134,21 @@ export default function LiveSpeech() {
               aria-pressed={on}
             >
               {on ? 'Listening…' : `Hold: ${s.label}`}
-              <kbd className="rounded border border-current px-1 text-xs opacity-70">
+              <kbd className="rounded border border-current px-1 text-sm opacity-70">
                 {s.key.toUpperCase()}
               </kbd>
             </Button>
           )
         })}
       </div>
-      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+      <label className="flex items-center gap-2 text-sm text-muted-foreground">
         <input
           type="checkbox"
           checked={testMode}
           onChange={(e) => setTestMode(e.target.checked)}
           className="accent-current"
         />
-        Test mode: show both speakers
+        Testing mode: show both speakers
       </label>
       {interim && <Line speaker={talking}>{interim}</Line>}
       {pending.map((line) => (
