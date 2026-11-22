@@ -27,6 +27,12 @@ export const visitStore = {
     emit()
     segmentListeners.forEach((l) => l(segment))
   },
+  // The patient's goal: what they want to be able to do again (spoken or typed during intake).
+  setGoal(text) {
+    const clean = text.trim()
+    state = { ...state, goal: clean ? { text: clean, discussed: false } : null }
+    emit()
+  },
   addFollowUp(followUp) {
     state = { ...state, followUps: [...state.followUps, followUp] }
     emit()
@@ -49,4 +55,16 @@ export function unmentioned(visit) {
 
 export function useVisit() {
   return useSyncExternalStore(visitStore.subscribe, visitStore.get)
+}
+
+// Did the goal come up? True when some line shares the goal's content words: one is enough for a
+// short goal ("Put plates on the top shelf" → plates, shelf), two for a longer one.
+const STOP_WORDS = new Set(['the', 'and', 'with', 'want', 'like', 'able', 'again', 'would', 'could', 'some', 'that', 'this', 'from', 'into', 'without', 'being'])
+export function goalDiscussed(visit) {
+  const words = (text) => new Set(text.toLowerCase().match(/[a-z]{4,}/g)?.filter((w) => !STOP_WORDS.has(w)) ?? [])
+  if (!visit.goal?.text) return false
+  const goal = words(visit.goal.text)
+  if (!goal.size) return false
+  const need = goal.size >= 4 ? 2 : 1
+  return visit.segments.some((s) => [...words(s.text)].filter((w) => goal.has(w)).length >= need)
 }
