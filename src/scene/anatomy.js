@@ -27,7 +27,7 @@ const HOVER = new THREE.Color('#ffffff')
 // glowing marker drawn on top of the bones, so the PT can see and pick it like any structure.
 const JOINT_RADIUS = 0.0085 // meters, before the region's scale
 const jointCore = new THREE.SphereGeometry(JOINT_RADIUS, 20, 14)
-const jointHalo = new THREE.SphereGeometry(JOINT_RADIUS * 2.1, 20, 14)
+const jointHalo = new THREE.SphereGeometry(JOINT_RADIUS * 1.8, 20, 14)
 function jointMarker(node) {
   const color = new THREE.Color(KIND_STYLES.joint.color)
   const core = new THREE.Mesh(

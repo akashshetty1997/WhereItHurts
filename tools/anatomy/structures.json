@@ -770,18 +770,32 @@
           "sentence": "Your lower jaw. It moves when you talk and chew."
         },
         {
-          "fma": "FMA22830",
+          "fma": "FMA32525",
           "kind": "muscle",
-          "label": "Deep back of the head muscle",
-          "anatomical": "Semispinalis capitis",
-          "sentence": "A muscle from your upper back to the base of your skull. It holds your head up."
+          "label": "Large base-of-skull muscle",
+          "anatomical": "Rectus capitis posterior major",
+          "sentence": "A short muscle from the base of your skull to your second neck bone. It tips your head back and turns it."
         },
         {
-          "fma": "FMA22653",
+          "fma": "FMA32526",
           "kind": "muscle",
-          "label": "Back of the neck muscle",
-          "anatomical": "Splenius capitis",
-          "sentence": "A muscle at the back of your neck that tips your head back and turns it."
+          "label": "Small base-of-skull muscle",
+          "anatomical": "Rectus capitis posterior minor",
+          "sentence": "A small muscle from the base of your skull to your top neck bone. It helps tip your head back."
+        },
+        {
+          "fma": "FMA32527",
+          "kind": "muscle",
+          "label": "Upper slanted skull muscle",
+          "anatomical": "Obliquus capitis superior",
+          "sentence": "A short muscle at the back of your head, from your top neck bone up to your skull. It helps tip your head back and to the side."
+        },
+        {
+          "fma": "FMA32528",
+          "kind": "muscle",
+          "label": "Lower slanted neck muscle",
+          "anatomical": "Obliquus capitis inferior",
+          "sentence": "A short muscle between your top two neck bones, just below your skull. It helps turn your head."
         }
       ],
       "joints": [

@@ -645,7 +645,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         const view = movement.camera(entry)
         moveTo({ target: patientRoot.localToWorld(view.at), radius: view.radius, phi: view.phi, theta: view.theta })
       } else {
-        focusRegion(region)
+        focusRegion(region, fit.viewTheta)
       }
     }
     // Voice: the PT asked for a movement ("raise your arm", "turn your head to the left"). Open its
@@ -931,7 +931,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
     }
     // Close-up: aim at the middle of the region's shape, from its side, near enough to fill the view.
     const mid = new THREE.Vector3()
-    function focusRegion(region) {
+    // theta: optional view angle (Show Anatomy picks the side its structures are on).
+    function focusRegion(region, theta) {
       const shape = shapes[region]
       if (!shape) return
       mid.copy(shape.a).add(shape.b).multiplyScalar(0.5)
@@ -940,7 +941,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         target: patientRoot.localToWorld(mid.clone()),
         radius: 1.0 + shape.r * 3 + length * 0.7,
         phi: CLOSE_UP_PHI,
-        theta: CLOSE_UP_THETA[region] ?? 0,
+        theta: theta ?? CLOSE_UP_THETA[region] ?? 0,
       })
     }
     viewRef.current = { zoom, resetView, turnAround, focusRegion, turn, tilt, slide, showSide }
