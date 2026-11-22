@@ -8,7 +8,7 @@ v2 narrows the product to physical therapy and adds the movement check, the pati
 
 WhereItHurts puts what the patient feels and what the physical therapist (PT) tests on one 3D body.
 
-- **Show it:** before the visit, the patient taps where it hurts, picks burning, sharp or aching, rates it 0–10, and writes the one thing they want to be able to do again.
+- **Show it:** before the visit, the patient taps where it hurts and just says it: "It's a sharp pain, about a six, worse when I lift my arm." The app fills in the pain type, the 0–10 rating and their words. They say their goal the same way. No typing.
 - **Say it:** the visit is transcribed live and each body part lights up as it comes up. When the patient describes pain traveling ("it runs from my neck into my shoulder"), a pulse of light follows that path.
 - **Test it:** the PT records a movement check: the area they assessed, the movement, and the patient's rating before and after. A Before/After toggle shows the change on the body, and the assessed area gets its own outline labelled "Area assessed by PT."
 - **Nothing gets lost:** at the end, anything the patient marked that nobody talked about glows amber, the goal is checked, and the patient confirms or corrects the summary.
@@ -50,8 +50,8 @@ WhereItHurts puts what the patient feels and what the physical therapist (PT) te
 
 **Must-haves (the demo fails without these):**
 
-1. **Mark your pain.** Tap a region, pick burning, sharp or aching, set 0–10. Each type has its own shader.
-2. **Your goal.** "What would you like to be able to do again?" The answer stays pinned beside the body for the whole visit.
+1. **Mark your pain by voice.** Tap a region; the body shows it's listening; the patient describes it in their own words. Speech fills in the pain type (burning, sharp, aching), the 0–10 rating and a note with what they said. Tap-and-pick buttons stay as the fallback when speech fails. Each type has its own shader.
+2. **Your goal, spoken.** "What would you like to be able to do again?" The patient answers out loud; it stays pinned beside the body for the whole visit.
 3. **Live voice lights the body.** Each sentence lights its regions in the speaker's color (PT blue, patient orange).
 4. **Pain-path pulse.** When the patient describes pain traveling, light runs along that path. The hero shot.
 5. **Movement check.** The PT records area assessed + movement + symptom region + before and after ratings + response (better, worse, same, moved, unsure) + the patient's words. The assessed area gets an outline labelled "Area assessed by PT." A Before/After toggle switches the body between the two ratings.
@@ -83,7 +83,7 @@ Three people: a narrator, a PT and a patient. The patient drives the laptop.
 | Time | Who | What happens |
 |---|---|---|
 | 0:00 | Narrator | Problem: you leave a visit with pain nobody discussed, and you're not sure why the PT tested somewhere else |
-| 0:15 | Patient | Marks right shoulder (aching, 5/10) and left knee (aching, 3/10); types the goal "Put plates on the top shelf" |
+| 0:15 | Patient | Taps the right shoulder: "It aches, about a five, when I reach up." Taps the left knee: "Dull ache, maybe a three." Says the goal: "Put plates on the top shelf." |
 | 0:35 | PT + patient | Script lines 1–6; the pulse on line 4 |
 | 1:05 | PT + patient | Lines 7–8: the movement check; the neck outline appears, the shoulder drops to 2/10 |
 | 1:25 | Patient | Flips Before/After: "Yes, that's what changed" |
@@ -121,11 +121,11 @@ Before it starts, the patient marks the right shoulder (aching, 5/10) and the le
 
 ## Architecture
 
-Two inputs (tapping and speech) write into one visit state; the body and the panels only read from it.
+Two inputs (tapping and speech, both before and during the visit) write into one visit state; the body and the panels only read from it.
 
 ```mermaid
 flowchart TD
-  P["Mark pain + goal<br/>tap region · type · 0–10"] --> S
+  P["Pre-visit intake<br/>tap region + speak · type · 0–10 · note · goal"] --> L
   V["Live speech<br/>hold-to-talk PT / patient"] --> L["POST /api/extract<br/>regions · path · follow-up · rating · movement<br/>keyword fallback"]
   L --> S["Visit state<br/>painted · goal · segments · observations · followUps"]
   M["Movement check<br/>manual entry or filled from speech"] --> S
@@ -146,8 +146,8 @@ Shared by everyone. Changing it means telling each other first. Changes from v1:
   },
   "goal": { "text": "Put plates on the top shelf", "discussed": false },
   "painted": [
-    { "region": "right_shoulder", "type": "aching", "intensity": 5 },
-    { "region": "left_knee", "type": "aching", "intensity": 3 }
+    { "region": "right_shoulder", "type": "aching", "intensity": 5, "note": "It aches, about a five, when I reach up." },
+    { "region": "left_knee", "type": "aching", "intensity": 3, "note": "Dull ache, maybe a three." }
   ],
   "segments": [
     {
@@ -182,7 +182,7 @@ Shared by everyone. Changing it means telling each other first. Changes from v1:
 
 **Field rules:**
 
-- `painted`: one entry per region, latest type wins; `intensity` is an integer 0–10.
+- `painted`: one entry per region, latest wins; `intensity` is an integer 0–10; `note` holds the patient's own words from the intake (optional).
 - `segments`: appended live as each sentence's regions come back.
 - `path`: set only when the speaker describes pain moving, in order. Drives the pulse.
 - `observations[].response`: one of `better`, `worse`, `same`, `moved`, `unsure`. `moved` means the symptom changed location; keep the patient's words in `quote`.
@@ -198,7 +198,8 @@ Shared by everyone. Changing it means telling each other first. Changes from v1:
 
 - **Dinesh (body) exposes:** `glow(region, color)`, `pulse(path)`, `paintLook(region, type, intensity)`, `flag(region)`, `outline(region, label)`, `showRatings(observation, "before" | "after")`, `onRegionClick(callback)`.
 - **Akash (brain) exposes:** `setPainted(list)`, `setGoal(text)`, `addSegment(segment)`, `onSegment(callback)`, `addObservation(obs)`, `confirmObservation(id, confirmed, correction?)`, `endVisit()` returning `{ unmentioned, goalDiscussed, observations }`, `playSegment(id)`.
-- **`/api/extract` grows two optional fields:** `rating` (0–10, when a number is said about pain) and `movement` (short text, when the PT names a movement). Everything else stays as is.
+- **`/api/extract` grows three optional fields:** `pain_type` (burning, sharp or aching, when the speaker describes the feeling), `rating` (0–10, when a number is said about pain) and `movement` (short text, when the PT names a movement). Everything else stays as is.
+- **Intake call:** the frontend sends the tapped region with the sentence, as `{ text, speaker: "patient", region }`. The region comes from the tap, so the LLM only has to find the type, rating and note. Words like "burning", "stabbing", "dull" and "throbbing" map to the three types (keyword fallback too).
 
 ## File ownership
 
@@ -224,7 +225,7 @@ Shared by everyone. Changing it means telling each other first. Changes from v1:
 |---|---|---|---|
 | D3 | 13:00–13:30 | `glow(region, color)` from mock segments | Mock segments light the right regions |
 | D4 | 13:30–13:45 | `onRegionClick` exposed through the contract | Akash's panel receives the clicked region |
-| D5 | 15:00–15:45 | Tap-to-mark with type picker and 0–10, calls `setPainted` | Marking the knee adds it to `painted` |
+| D5 | 15:00–15:45 | Intake on the body: tap selects a region and shows a listening highlight; the result (type, rating) shows on the body; tap-and-pick fallback buttons | Tapping the knee and speaking adds it to `painted` |
 | D6 | 15:45–16:15 | Pain-type shader: burning, sharp, aching, brightness by intensity | All three run at 60fps |
 | D7 | 16:15–17:00 | `pulse(path)`, the hero shot | Light runs neck → right shoulder |
 | D8 | 17:00–17:30 | `flag(region)` amber, `outline(region, label)` for "Area assessed by PT" | Knee amber; neck outlined with its label |
@@ -237,7 +238,7 @@ Shared by everyone. Changing it means telling each other first. Changes from v1:
 |---|---|---|---|
 | A1 | 13:00–13:45 | Live speech path: hold-to-talk PT/patient, one sentence → `/api/extract` → `addSegment` | Saying line 4 adds a segment with neck and right_shoulder in regions and path within 2 s |
 | A2 | 13:45–14:00 | Claude call in `_extract_with_llm`, plus `rating` and `movement` fields | Lines 6 and 7 return rating 5 and the movement |
-| A3 | 15:00–15:45 | Goal input and pinned goal; store: `setGoal`, `addObservation`, `confirmObservation` | Goal shows beside the body; mock observation in the store |
+| A3 | 15:00–15:45 | Voice intake: tapped region + one spoken sentence → `/api/extract` with `pain_type`, `rating`, note → `setPainted`; spoken goal → `setGoal`; store: `addObservation`, `confirmObservation` | Tapping the shoulder and saying "it aches, about a five" adds aching 5/10; the spoken goal is pinned |
 | A4 | 15:45–16:30 | Movement check panel: manual entry (area via `onRegionClick`, movement, before/after, response) | Entering lines 7–8 by hand creates `o1` |
 | A5 | 16:30–17:15 | `endVisit`: amber catch cards, goal check, confirm cards, PT summary card | Knee card, goal card and confirm card appear |
 | A6 | 17:15–17:30 | Fill the movement check from speech | Saying lines 6–8 fills `o1` without typing |
