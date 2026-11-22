@@ -3,7 +3,7 @@ export const mockVisit = {
   visitId: 'live-01',
   speakers: {
     doctor: { color: '#4FC3F7' },
-    patient: { color: '#FFB74D' },
+    patient: { color: '#F78FB3' }, // rose: never confused with the amber missed-pain flag
   },
   painted: [
     { region: 'lower_back', type: 'aching', intensity: 0.6 },

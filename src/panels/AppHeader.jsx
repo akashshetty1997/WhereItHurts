@@ -28,7 +28,7 @@ export default function AppHeader({ mode, onAction }) {
         <span className="text-xl font-bold tracking-tight">WhereItHurts</span>
         <span className="hidden text-sm text-muted-foreground 2xl:inline">Show where it hurts. Say what it feels like.</span>
       </div>
-      <div className="flex items-center gap-5">
+      <div className="flex min-w-0 items-center gap-4">
         <ol className="flex items-center gap-1.5" aria-label="Visit steps">
           {STEPS.map((step, i) => (
             <li key={step.mode} className="flex items-center gap-1.5">
@@ -48,7 +48,8 @@ export default function AppHeader({ mode, onAction }) {
                 >
                   {i + 1}
                 </span>
-                {step.label}
+                {/* Narrow windows: only the current step keeps its label, so the header fits. */}
+                <span className={cn(i !== current && 'sr-only xl:not-sr-only')}>{step.label}</span>
               </span>
             </li>
           ))}

@@ -25,9 +25,9 @@ export default function App() {
   const missed = mode === 'ended' ? unmentioned(visit) : []
 
   return (
-    <div className="grid h-dvh grid-rows-[auto_1fr] bg-background">
+    <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr] overflow-hidden bg-background">
       <AppHeader mode={mode} onAction={() => setMode(NEXT_MODE[mode])} />
-      <div className="grid min-h-0 grid-cols-[320px_1fr_360px]">
+      <div className="grid min-h-0 grid-cols-[320px_minmax(0,1fr)_360px]">
         {/* The list and the body share one selection: picking either one selects both. */}
         <IntakePanel
           visit={visit}
@@ -38,7 +38,7 @@ export default function App() {
           patient={patient}
           onPatientChange={canSwitchBody ? setPatient : null}
         />
-        <main className="relative min-h-0 bg-navy-deep">
+        <main className="relative min-h-0 min-w-0 overflow-hidden bg-stage text-foreground">
           <BodyScene key={patient} patient={patient} onRegionClick={setSelected} mode={mode} />
         </main>
         <ConversationPanel visit={visit} mode={mode} selected={selected} missed={missed} />
