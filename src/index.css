@@ -179,3 +179,41 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* Printed reports (src/panels/Report.jsx): only the report prints, in black on white whatever the
+   theme; on screen it's never shown. */
+.print-report { display: none; }
+@media print {
+  @page { margin: 14mm; }
+  :root, :root.dark { color-scheme: light; --background: #fff; }
+  html, body { height: auto !important; overflow: visible !important; background: #fff !important; }
+  #root { display: none !important; }
+  .print-report {
+    display: block;
+    color: #111;
+    font-size: 11pt;
+    line-height: 1.4;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .print-report .take-home { font-size: 14pt; }
+  .print-report h1 { font-size: 20pt; font-weight: 700; }
+  .print-report .take-home h1 { font-size: 26pt; }
+  .print-report h2 { font-size: 1.15em; font-weight: 700; margin-bottom: 4pt; }
+  .print-report h3 { font-weight: 700; margin-top: 4pt; }
+  .report-header { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 2px solid #111; padding-bottom: 6pt; margin-bottom: 10pt; }
+  .report-header p { color: #444; }
+  .report-section { margin: 8pt 0; break-inside: avoid; }
+  .report-section ul { list-style: disc; padding-left: 16pt; }
+  .report-section li { margin: 2pt 0; }
+  .report-section table { width: 100%; border-collapse: collapse; }
+  .report-section th, .report-section td { text-align: left; vertical-align: top; padding: 3pt 6pt 3pt 0; border-bottom: 1px solid #ccc; }
+  .report-section th { font-weight: 700; color: #444; }
+  .report-flag { border-left: 4px solid #b45309; padding-left: 8pt; font-weight: 700; }
+  .report-maps { display: flex; gap: 12pt; justify-content: center; margin: 8pt 0; break-inside: avoid; }
+  .report-map { width: 26%; text-align: center; }
+  .report-map.large { width: 42%; }
+  .report-map img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border: 1px solid #ddd; border-radius: 6pt; }
+  .report-map figcaption { color: #444; font-size: 0.9em; margin-top: 2pt; }
+  .report-footer { break-inside: avoid; margin-top: 10pt; border-top: 1px solid #ccc; padding-top: 6pt; color: #444; font-size: 0.85em; }
+}

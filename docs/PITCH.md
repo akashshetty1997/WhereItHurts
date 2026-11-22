@@ -26,9 +26,8 @@ Switch to the app. Follow `docs/DEMO_SCRIPT.md`. Narrator speaks only at the thr
 
 ## 5. What's next (2:15–2:30)
 **Slide:** "PT intake today; progress across sessions next."
+- Built: 3D reference anatomy, so the PT can show *why* the neck (Show Anatomy), plus a PT Report and a Take-Home Summary
 - Pre-visit intake a PT practice sends before the first appointment
-- 3D reference anatomy so the PT can show *why* the neck (in progress)
-- PT report and take-home summary
 - Progress across visits: watch pain move back toward the spine as therapy works
 
 **Close:** "Show where it hurts, say what it feels like, and never leave a visit with pain nobody talked about."

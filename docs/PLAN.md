@@ -11,7 +11,8 @@ v2 narrows the product to physical therapy and adds the movement check, the pati
 - **Movement check, Before/After on the body, confirm cards, PT summary, amber catch, pain-path pulse** (Dinesh).
 - **New Visit**, visit kept across a refresh, demo accounts (patient / PT), Testing mode, light / dark, view controls without a mouse.
 - **Public link:** frontend only ("Try the Demo"); the live demo runs on the laptop (`docs/DEMO_SCRIPT.md`).
-- **Next:** 3D reference anatomy and the PT report / take-home summary (`docs/ANATOMY_AND_REPORTS_PLAN.md`).
+- **Show Anatomy** (PT or Testing mode): select a body part → see-through skin with BodyParts3D bones, muscles and joints fitted to each body (all 7 regions, male and female); click a structure for its plain name, Explain to Patient, Add to Report (discussed / examined + the PT's words).
+- **PT Report and Take-Home Summary:** print or Save as PDF from the Summary step, with front and back body maps (`src/panels/Report.jsx`).
 
 ## Overview
 

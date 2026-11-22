@@ -1,4 +1,9 @@
-import { CircleAlert, CircleCheck, Target } from 'lucide-react'
+import { useState } from 'react'
+import { CircleAlert, CircleCheck, FileText, Printer, Target } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { snapshot } from '@/scene/bodyApi'
+import { useUser } from '@/auth/userContext'
+import Report from './Report'
 import { goalDiscussed } from '@/visitStore'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { regionLabel, REGIONS } from '@/regions'
@@ -55,6 +60,7 @@ export default function ConversationPanel({ visit, mode, selected, missed }) {
       )}
 
       {mode === 'ended' && <ConfirmChecks visit={visit} />}
+      {mode === 'ended' && <ReportButtons visit={visit} missed={missed} />}
       {mode === 'ended' && <PtSummary visit={visit} missed={missed} />}
 
       {selected && mode !== 'paint' && (
@@ -97,5 +103,33 @@ export default function ConversationPanel({ visit, mode, selected, missed }) {
         )}
       </ScrollArea>
     </aside>
+  )
+}
+
+// PT Report (PT or Testing mode) and Take-Home Summary (everyone): print, or Save as PDF.
+function ReportButtons({ visit, missed }) {
+  const { user, testMode } = useUser()
+  const [report, setReport] = useState(null) // { kind, maps }
+  const open = (kind) => setReport({ kind, maps: { front: snapshot('front'), back: snapshot('back') } })
+  return (
+    <section className="space-y-2" aria-label="Reports">
+      <h2 className="text-xl font-bold">Reports</h2>
+      <p className="text-sm text-muted-foreground">Opens the print dialog. Choose “Save as PDF” to keep a copy.</p>
+      <div className="grid gap-2">
+        {(user?.role === 'pt' || testMode) && (
+          <Button className="gap-2 font-bold" onClick={() => open('pt')}>
+            <FileText className="size-4" aria-hidden />
+            PT Report
+          </Button>
+        )}
+        <Button variant="secondary" className="gap-2 font-bold" onClick={() => open('patient')}>
+          <Printer className="size-4" aria-hidden />
+          Take-Home Summary
+        </Button>
+      </div>
+      {report && (
+        <Report kind={report.kind} visit={visit} missed={missed} maps={report.maps} user={user} onDone={() => setReport(null)} />
+      )}
+    </section>
   )
 }
