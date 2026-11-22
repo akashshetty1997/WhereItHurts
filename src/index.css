@@ -1,0 +1,32 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: #0d1117;
+  color: #e6edf3;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+h1 { font-size: 1.3rem; margin: 0 0 1rem; }
+h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: #8b949e; margin: 1.2rem 0 0.5rem; }
+button { font: inherit; padding: 0.5rem 0.8rem; border-radius: 8px; border: 1px solid #30363d; background: #161b22; color: inherit; cursor: pointer; }
+button:disabled { opacity: 0.4; cursor: default; }
+
+.app { display: grid; grid-template-columns: 240px 1fr 320px; height: 100vh; }
+.panel { padding: 1.2rem; overflow-y: auto; border-right: 1px solid #21262d; }
+.panel:last-child { border-right: 0; border-left: 1px solid #21262d; }
+.stage { position: relative; min-height: 0; }
+.scene { position: absolute; inset: 0; }
+.mode-tag { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); font-size: 0.8rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.1em; }
+
+.legend { display: block; width: 100%; margin-bottom: 0.4rem; text-align: left; text-transform: capitalize; }
+.legend.active { outline: 2px solid currentColor; }
+.legend.burning { color: #ff7043; }
+.legend.sharp { color: #fff59d; }
+.legend.aching { color: #b39ddb; }
+.legend.eraser { color: #8b949e; }
+.hint { font-size: 0.8rem; color: #8b949e; }
+.actions { margin-top: 1rem; }
+.mention { color: #c9d1d9; font-style: italic; }
+.card { padding: 0.7rem; border-radius: 8px; margin-bottom: 0.5rem; }
+.card.warn { background: #3d2a00; border: 1px solid #ffb300; color: #ffd54f; }
+.card.ok { background: #0f2e1a; border: 1px solid #2ea043; color: #7ee787; }
