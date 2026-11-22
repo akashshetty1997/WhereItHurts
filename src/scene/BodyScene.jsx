@@ -18,15 +18,17 @@ import { registerBody, emitRegionClick, glow, setListening } from './bodyApi'
 import { DEV_SEGMENTS, DEV_SEGMENT_GAP_MS } from './devSegments'
 import IntakePicker from './IntakePicker'
 import { toTen, toUnit } from './intensity'
-import { SHAPE_ORDER, regionAt, regionAnchor } from './patientRegions'
+import { PATIENTS, DEFAULT_PATIENT, SHAPE_ORDER, regionAt, regionAnchor } from './patientRegions'
 import { createPatientMaterial, patientUniforms } from '../shaders/patientMaterial'
+import { Focus, Maximize2, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { regionLabel as fullRegionLabel } from '../regions'
 import './scene.css'
 
 // A real person: Microsoft Rocketbox "Sports_Male_04" (MIT, public/models/LICENSE-rocketbox.txt),
 // baked to a static A-pose mesh in meters and compressed (meshopt + WebP). Lit by a CC0 Poly
 // Haven studio HDRI (public/hdri) plus key and rim lights, with soft shadows, ambient occlusion
 // and a light bloom. The patient faces +z, so their left is +x.
-const MODEL_URL = '/models/patient.glb'
 const HDRI_URL = '/hdri/studio_small_08_1k.hdr'
 
 // Used when the visit JSON has no color for a speaker (v1 mock says "doctor", v2 says "pt").
@@ -51,6 +53,30 @@ const CAMERA_FOV = 28
 const CAMERA_HOME = new THREE.Vector3(0, 1.0, 5.2)
 const CAMERA_TARGET = new THREE.Vector3(0, 0.92, 0)
 const INTRO_SECONDS = 2.2
+// Every camera move (intro, close-up, turn, zoom, reset) eases along an arc around its target.
+const MOVE_SECONDS = 0.9
+// Zoom range: a close-up of one joint to the whole room.
+const MIN_DISTANCE = 0.7
+const MAX_DISTANCE = 9
+const ZOOM_STEP = 1.45
+// A press that moves less than this (px) and ends quickly is a tap, not a drag-to-rotate.
+const TAP_MAX_MOVE = 6
+const TAP_MAX_MS = 600
+const DOUBLE_TAP_MS = 350
+// The pain card opens this long after a click, so a quick second click still lands on the body.
+const PICKER_DELAY_MS = 360
+// Close-up framing per region: the side to look from (theta, radians around the body: 0 = front,
+// π = back; the patient's right is −x, so a negative angle looks at it) and how far to stand.
+const CLOSE_UP_THETA = {
+  head: 0,
+  neck: 0,
+  right_shoulder: -0.55,
+  upper_back: Math.PI,
+  lower_back: Math.PI,
+  left_leg: 0.3,
+  left_knee: 0.25,
+}
+const CLOSE_UP_PHI = 1.38 // a little above eye level
 
 // Studio backdrop: deep navy, a little lighter behind the patient.
 function makeBackground() {
@@ -121,6 +147,7 @@ function buildFloor() {
 }
 
 const easeOutCubic = (x) => 1 - Math.pow(1 - x, 3)
+const easeInOutCubic = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2)
 
 // 0..1: how strong a glow started at `start` is at time `t`.
 function glowEnvelope(t, start) {
@@ -159,7 +186,10 @@ function fakeVoiceIntake(region) {
   }, 1500)
 }
 
-export default function BodyScene({ onRegionClick, mode = 'paint' }) {
+// Remount with key={patient} to switch patients (App.jsx does).
+export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEFAULT_PATIENT }) {
+  const patientRef = useRef(patient)
+  const viewRef = useRef(null) // camera actions for the overlay buttons
   const mountRef = useRef(null)
   const clickRef = useRef(onRegionClick)
   clickRef.current = onRegionClick
@@ -183,6 +213,9 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
   useEffect(() => {
     const mount = mountRef.current
     let disposed = false
+    const model = PATIENTS[patientRef.current] ?? PATIENTS[DEFAULT_PATIENT]
+    const shapes = model.shapes
+    patientUniforms.setShapes(shapes)
     const scene = new THREE.Scene()
     scene.background = makeBackground()
     const camera = new THREE.PerspectiveCamera(CAMERA_FOV, 1, 0.1, 50)
@@ -259,7 +292,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
 
     new GLTFLoader()
       .setMeshoptDecoder(MeshoptDecoder)
-      .load(MODEL_URL, (gltf) => {
+      .load(model.url, (gltf) => {
         if (disposed) return
         const maxAniso = renderer.capabilities.getMaxAnisotropy()
         patientRoot.add(gltf.scene)
@@ -268,7 +301,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
         // The optimizer split head and body into two meshes, each with its own quantization.
         gltf.scene.traverse((o) => {
           if (!o.isMesh) return
-          patientMeshes.push(o)
+          // Taps pass through hair to the skin underneath (a ponytail over the nape selects the neck).
+          if (!/hair/i.test(o.material.name)) patientMeshes.push(o)
           // The bounds that came with the quantized geometry are too small, which made raycasts
           // (taps on the shoulder) miss and could frustum-cull the body. Recompute them.
           o.geometry.computeBoundingSphere()
@@ -285,7 +319,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
           const el = document.createElement('div')
           el.className = 'region-label'
           const label = new CSS2DObject(el)
-          label.position.copy(regionAnchor(region))
+          label.position.copy(regionAnchor(region, shapes))
           label.visible = false
           patientRoot.add(label)
           labels.set(region, { label, el, text: '' })
@@ -312,6 +346,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
         setSelected(region)
         emitRegionClick(region)
         clickRef.current?.(region)
+        // Chosen from the list: fly to it, so back pain is visible without turning by hand.
+        if (region) focusRegion(region)
       },
     })
 
@@ -321,16 +357,18 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
       segment.regions.forEach((region) => glow(region, color))
     })
 
-    // Left button is reserved for tapping regions; right-drag orbits, scroll zooms.
+    // Drag (left or right button) orbits a full 360°, scroll zooms toward the pointer, and a short
+    // click selects a body part (see onPointerUp).
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.target.copy(CAMERA_TARGET)
-    controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE }
+    controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE }
     controls.enablePan = false
     controls.enableDamping = true
-    controls.minDistance = 2.2
-    controls.maxDistance = 8
-    controls.minPolarAngle = 0.35
-    controls.maxPolarAngle = 1.72
+    controls.zoomToCursor = true
+    controls.minDistance = MIN_DISTANCE
+    controls.maxDistance = MAX_DISTANCE
+    controls.minPolarAngle = 0.2
+    controls.maxPolarAngle = 1.85
     const onContextMenu = (e) => e.preventDefault()
     renderer.domElement.addEventListener('contextmenu', onContextMenu)
 
@@ -348,19 +386,39 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
       raycaster.setFromCamera(pointer, camera)
       const hit = raycaster.intersectObjects(patientMeshes, false)[0]
       if (!hit) return null
-      return regionAt(patientRoot.worldToLocal(local.copy(hit.point)))
+      return regionAt(patientRoot.worldToLocal(local.copy(hit.point)), shapes)
     }
 
+    // Left-drag rotates; a short press without movement is a tap on the body.
+    let press = null
     const onPointerDown = (e) => {
-      if (e.button !== 0) return
+      press = e.button === 0 ? { x: e.clientX, y: e.clientY, t: performance.now() } : null
+    }
+    const onPointerUp = (e) => {
+      if (!press || e.button !== 0) return
+      const moved = Math.hypot(e.clientX - press.x, e.clientY - press.y)
+      const quick = performance.now() - press.t < TAP_MAX_MS
+      press = null
+      if (moved > TAP_MAX_MOVE || !quick) return
       const region = regionUnder(e)
+      // Two clicks on the same part in quick succession: a close-up of it. (Detected here, not
+      // with dblclick, so the pain card opening after the first click can't swallow the second.)
+      const now = performance.now()
+      if (region && lastTap && lastTap.region === region && now - lastTap.t < DOUBLE_TAP_MS) {
+        lastTap = null
+        focusRegion(region)
+        return
+      }
+      lastTap = { region, t: now }
       // Selected in every mode (ring on the body); the pain card only opens during intake.
       setSelected(region)
       if (modeRef.current === 'paint' && region && fakeVoice) fakeVoiceIntake(region)
       emitRegionClick(region)
       clickRef.current?.(region)
     }
+    let lastTap = null
     renderer.domElement.addEventListener('pointerdown', onPointerDown)
+    renderer.domElement.addEventListener('pointerup', onPointerUp)
 
     // Hover: the region under the pointer gets a faint outline, and the cursor shows it's tappable.
     // Raycasting runs at most once per frame.
@@ -375,8 +433,16 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
     }
     renderer.domElement.addEventListener('pointermove', onPointerMove)
     renderer.domElement.addEventListener('pointerleave', onPointerLeave)
+    // Keyboard: arrows turn the body, + / − zoom, 0 shows the whole body, Esc clears the selection.
+    // Ignored while typing, and T / P stay with the talk buttons.
     const onKeyDown = (e) => {
+      if (e.target.closest?.('input, textarea, [contenteditable="true"]')) return
       if (e.key === 'Escape') setSelected(null)
+      else if (e.key === 'ArrowLeft') moveBy({ thetaDelta: -Math.PI / 8 })
+      else if (e.key === 'ArrowRight') moveBy({ thetaDelta: Math.PI / 8 })
+      else if (e.key === '+' || e.key === '=') zoom(1 / ZOOM_STEP)
+      else if (e.key === '-' || e.key === '_') zoom(ZOOM_STEP)
+      else if (e.key === '0') resetView()
     }
     window.addEventListener('keydown', onKeyDown)
 
@@ -393,21 +459,79 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
     observer.observe(mount)
     resize()
 
-    let intro = null
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    // Camera moves: target slides, distance and height ease, the angle turns around the target
+    // (never a straight line through the body). Reduce Motion jumps straight to the end.
+    let move = null
+    const spherical = new THREE.Spherical()
+    const currentView = () => {
+      spherical.setFromVector3(camera.position.clone().sub(controls.target))
+      return { target: controls.target.clone(), radius: spherical.radius, phi: spherical.phi, theta: spherical.theta }
+    }
+    function moveTo(to, seconds = MOVE_SECONDS, ease = easeInOutCubic) {
+      const from = currentView()
+      let dTheta = to.thetaDelta
+      if (dTheta === undefined) {
+        const raw = (to.theta ?? from.theta) - from.theta
+        dTheta = Math.atan2(Math.sin(raw), Math.cos(raw)) // the shorter way around
+      }
+      move = {
+        from,
+        to: {
+          target: (to.target ?? from.target).clone(),
+          radius: THREE.MathUtils.clamp(to.radius ?? from.radius, MIN_DISTANCE, MAX_DISTANCE),
+          phi: to.phi ?? from.phi,
+        },
+        dTheta,
+        seconds: reduceMotion ? 0.001 : seconds,
+        ease,
+        progress: 0,
+      }
+      controls.enabled = false
+    }
+    const moveBy = (delta) => moveTo(delta, 0.45)
+    const zoom = (factor) => moveTo({ radius: currentView().radius * factor }, 0.4)
+    const resetView = () => {
+      spherical.setFromVector3(CAMERA_HOME.clone().sub(CAMERA_TARGET))
+      moveTo({ target: CAMERA_TARGET, radius: spherical.radius, phi: spherical.phi, theta: 0 })
+    }
+    const turnAround = () => moveTo({ thetaDelta: Math.PI }, 1.2)
+    // Close-up: aim at the middle of the region's shape, from its side, near enough to fill the view.
+    const mid = new THREE.Vector3()
+    function focusRegion(region) {
+      const shape = shapes[region]
+      if (!shape) return
+      mid.copy(shape.a).add(shape.b).multiplyScalar(0.5)
+      const length = shape.a.distanceTo(shape.b)
+      moveTo({
+        target: patientRoot.localToWorld(mid.clone()),
+        radius: 1.0 + shape.r * 3 + length * 0.7,
+        phi: CLOSE_UP_PHI,
+        theta: CLOSE_UP_THETA[region] ?? 0,
+      })
+    }
+    viewRef.current = { zoom, resetView, turnAround, focusRegion }
     renderer.setAnimationLoop(() => {
       timer.update()
       const t = timer.getElapsed()
       // Reduce Motion: the pain looks slow down (sharp sparks re-seed ~1/s instead of ~7/s).
       patientUniforms.setTime(reduceMotion ? t * 0.15 : t)
 
-      // Camera intro: ease from the start angle to where the camera should rest.
-      if (intro) {
-        intro.progress = Math.min(1, intro.progress + timer.getDelta() / INTRO_SECONDS)
-        camera.position.lerpVectors(intro.from, intro.to, easeOutCubic(intro.progress))
+      if (move) {
+        move.progress = Math.min(1, move.progress + timer.getDelta() / move.seconds)
+        const k = move.ease(move.progress)
+        controls.target.lerpVectors(move.from.target, move.to.target, k)
+        camera.position
+          .setFromSphericalCoords(
+            THREE.MathUtils.lerp(move.from.radius, move.to.radius, k),
+            THREE.MathUtils.lerp(move.from.phi, move.to.phi, k),
+            move.from.theta + move.dTheta * k,
+          )
+          .add(controls.target)
         camera.lookAt(controls.target)
-        if (intro.progress === 1) {
-          intro = null
+        if (move.progress === 1) {
+          move = null
           controls.enabled = true
         }
       }
@@ -488,15 +612,11 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
       }
     }
 
-    // Camera intro from a raised side angle (skipped when the user prefers reduced motion).
-    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      const to = camera.position.clone()
-      const from = to.clone().sub(CAMERA_TARGET).applyAxisAngle(new THREE.Vector3(0, 1, 0), -0.75).multiplyScalar(1.25).add(CAMERA_TARGET)
-      from.y += 1.2
-      camera.position.copy(from)
-      camera.lookAt(CAMERA_TARGET)
-      controls.enabled = false
-      intro = { from, to, progress: 0 }
+    // Camera intro: from a raised side angle to the resting view (skipped with Reduce Motion).
+    if (!reduceMotion) {
+      const rest = currentView()
+      camera.position.setFromSphericalCoords(rest.radius * 1.25, rest.phi - 0.25, rest.theta - 0.75).add(controls.target)
+      moveTo({ radius: rest.radius, phi: rest.phi, theta: rest.theta }, INTRO_SECONDS, easeOutCubic)
     }
 
     return () => {
@@ -507,7 +627,9 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
       renderer.setAnimationLoop(null)
       observer.disconnect()
       controls.dispose()
+      viewRef.current = null
       renderer.domElement.removeEventListener('pointerdown', onPointerDown)
+      renderer.domElement.removeEventListener('pointerup', onPointerUp)
       renderer.domElement.removeEventListener('pointermove', onPointerMove)
       renderer.domElement.removeEventListener('pointerleave', onPointerLeave)
       renderer.domElement.removeEventListener('contextmenu', onContextMenu)
@@ -531,15 +653,42 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
     }
   }, [])
 
+  // The pain card follows the selection after a short delay (see PICKER_DELAY_MS).
+  const [pickerFor, setPickerFor] = useState(null)
+  useEffect(() => {
+    const id = setTimeout(() => setPickerFor(selected), selected ? PICKER_DELAY_MS : 0)
+    return () => clearTimeout(id)
+  }, [selected])
+
   const entry = selected ? visit.painted.find((p) => p.region === selected) : null
 
   return (
     <div className="scene">
       <div ref={mountRef} className="scene" />
+      {/* View controls: a floating functional layer over the 3D content. */}
+      <div className="pointer-events-none absolute inset-x-4 top-4 flex items-start justify-between gap-3">
+        <p className="rounded-full bg-background/70 px-3 py-1.5 text-sm text-muted-foreground backdrop-blur">
+          Drag to turn · Double-click a part to zoom in
+        </p>
+        <div className="pointer-events-auto flex flex-col items-end gap-2">
+          <div className="flex gap-1 rounded-xl bg-background/70 p-1 backdrop-blur">
+            <ViewButton label="Zoom Out (−)" onClick={() => viewRef.current?.zoom(ZOOM_STEP)} icon={ZoomOut} iconOnly />
+            <ViewButton label="Zoom In (+)" onClick={() => viewRef.current?.zoom(1 / ZOOM_STEP)} icon={ZoomIn} iconOnly />
+            <ViewButton label="Turn Around" onClick={() => viewRef.current?.turnAround()} icon={RotateCcw} />
+            <ViewButton label="Whole Body" onClick={() => viewRef.current?.resetView()} icon={Maximize2} />
+          </div>
+          {selected && (
+            <Button variant="default" className="gap-2" onClick={() => viewRef.current?.focusRegion(selected)}>
+              <Focus className="size-4" aria-hidden />
+              Close Up: {fullRegionLabel(selected)}
+            </Button>
+          )}
+        </div>
+      </div>
       {!loaded && (
         <p className="absolute inset-x-0 top-1/2 text-center text-sm text-muted-foreground">Loading the patient…</p>
       )}
-      {mode === 'paint' && selected && (
+      {mode === 'paint' && selected && pickerFor === selected && (
         <IntakePicker
           region={selected}
           entry={entry}
@@ -548,5 +697,22 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
         />
       )}
     </div>
+  )
+}
+
+function ViewButton({ label, icon, onClick, iconOnly = false }) {
+  const Icon = icon
+  return (
+    <Button
+      variant="ghost"
+      size={iconOnly ? 'icon' : 'default'}
+      className={iconOnly ? 'size-9' : 'h-9 gap-2'}
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+    >
+      <Icon className="size-4" aria-hidden />
+      {!iconOnly && label}
+    </Button>
   )
 }
