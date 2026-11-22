@@ -1,32 +1,121 @@
-:root {
-  color-scheme: dark;
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  background: #0d1117;
-  color: #e6edf3;
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/atkinson-hyperlegible-next";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
+    /* What each color means in this app */
+    --color-pt: var(--pt);
+    --color-patient: var(--patient);
+    --color-burning: var(--burning);
+    --color-sharp: var(--sharp);
+    --color-aching: var(--aching);
+    --color-flag: var(--flag);
+    --color-clear: var(--clear);
+    --color-navy-deep: var(--navy-deep);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
 }
-* { box-sizing: border-box; }
-body { margin: 0; }
-h1 { font-size: 1.3rem; margin: 0 0 1rem; }
-h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: #8b949e; margin: 1.2rem 0 0.5rem; }
-button { font: inherit; padding: 0.5rem 0.8rem; border-radius: 8px; border: 1px solid #30363d; background: #161b22; color: inherit; cursor: pointer; }
-button:disabled { opacity: 0.4; cursor: default; }
 
-.app { display: grid; grid-template-columns: 240px 1fr 320px; height: 100vh; }
-.panel { padding: 1.2rem; overflow-y: auto; border-right: 1px solid #21262d; }
-.panel:last-child { border-right: 0; border-left: 1px solid #21262d; }
-.stage { position: relative; min-height: 0; }
-.scene { position: absolute; inset: 0; }
-.mode-tag { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); font-size: 0.8rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.1em; }
+/* One dark theme, tuned for a projector: navy night, high-contrast text.
+   Color is reserved for meaning: who is speaking, the pain type, the missed-pain flag. */
+:root {
+    --navy-deep: #070f1c;
+    --background: #0a1424;
+    --foreground: #e8f0fa;
+    --card: #0f1d33;
+    --card-foreground: #e8f0fa;
+    --popover: #0f1d33;
+    --popover-foreground: #e8f0fa;
+    --primary: #4fc3f7;
+    --primary-foreground: #04121f;
+    --secondary: #16284a;
+    --secondary-foreground: #e8f0fa;
+    --muted: #13223d;
+    --muted-foreground: #8fa3bf;
+    --accent: #16284a;
+    --accent-foreground: #e8f0fa;
+    --destructive: #ff6b6b;
+    --border: #1e3150;
+    --input: #24395c;
+    --ring: #4fc3f7;
+    --chart-1: #4fc3f7;
+    --chart-2: #ffb74d;
+    --chart-3: #9d7bff;
+    --chart-4: #ff5a2e;
+    --chart-5: #ffe066;
+    --radius: 0.75rem;
+    --sidebar: #0f1d33;
+    --sidebar-foreground: #e8f0fa;
+    --sidebar-primary: #4fc3f7;
+    --sidebar-primary-foreground: #04121f;
+    --sidebar-accent: #16284a;
+    --sidebar-accent-foreground: #e8f0fa;
+    --sidebar-border: #1e3150;
+    --sidebar-ring: #4fc3f7;
 
-.legend { display: block; width: 100%; margin-bottom: 0.4rem; text-align: left; text-transform: capitalize; }
-.legend.active { outline: 2px solid currentColor; }
-.legend.burning { color: #ff7043; }
-.legend.sharp { color: #fff59d; }
-.legend.aching { color: #b39ddb; }
-.legend.eraser { color: #8b949e; }
-.hint { font-size: 0.8rem; color: #8b949e; }
-.actions { margin-top: 1rem; }
-.mention { color: #c9d1d9; font-style: italic; }
-.card { padding: 0.7rem; border-radius: 8px; margin-bottom: 0.5rem; }
-.card.warn { background: #3d2a00; border: 1px solid #ffb300; color: #ffd54f; }
-.card.ok { background: #0f2e1a; border: 1px solid #2ea043; color: #7ee787; }
+    --pt: #4fc3f7;
+    --patient: #ffb74d;
+    --burning: #ff5a2e;
+    --sharp: #ffe066;
+    --aching: #9d7bff;
+    --flag: #ffb300;
+    --clear: #5fd38d;
+    color-scheme: dark;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    @apply bg-background text-foreground;
+    }
+  html {
+    @apply font-sans;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

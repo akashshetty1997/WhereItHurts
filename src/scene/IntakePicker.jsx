@@ -1,9 +1,15 @@
+import { X } from 'lucide-react'
 import { visitStore } from '../visitStore'
 import { regionLabel, PAIN_TYPES } from '../regions'
 import { toTen } from './intensity'
+import { Button } from '@/components/ui/button'
+import { Slider } from '@/components/ui/slider'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { PAIN_STYLES } from '@/lib/visitDisplay'
+import { cn } from '@/lib/utils'
 
-// Shown under the body when a region is tapped during intake. Voice fills the same entry;
-// these buttons are the fallback when speech fails or the patient prefers to tap.
+// Shown beside the body when a region is tapped during intake. Voice fills the same entry;
+// these controls are the fallback when speech fails or the patient prefers to tap.
 export default function IntakePicker({ region, entry, listening, onClose }) {
   const intensity = entry ? toTen(entry.intensity) : 5
 
@@ -20,43 +26,69 @@ export default function IntakePicker({ region, entry, listening, onClose }) {
   }
 
   return (
-    <div className="intake-picker" onPointerDown={(e) => e.stopPropagation()}>
-      <div className="intake-head">
-        <b>{regionLabel(region)}</b>
-        <button className="intake-close" onClick={onClose} aria-label="Close">×</button>
-      </div>
-      <p className={`intake-status ${listening ? 'on' : ''}`}>
-        {listening ? 'Listening… describe the pain' : 'Speak to describe it, or pick below'}
-      </p>
-      <div className="intake-types">
-        {PAIN_TYPES.map((t) => (
-          <button
-            key={t}
-            className={`legend ${t} ${entry?.type === t ? 'active' : ''}`}
-            onClick={() => save({ type: t })}
+    <div
+      className="absolute top-1/2 right-4 w-72 -translate-y-1/2 space-y-4 rounded-2xl bg-card/95 p-4 shadow-2xl ring-1 ring-foreground/10 backdrop-blur animate-in fade-in slide-in-from-right-2"
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-base font-bold leading-tight">{regionLabel(region)}</p>
+          <p
+            className={cn('mt-1 text-sm', listening ? 'animate-pulse text-patient' : 'text-muted-foreground')}
+            aria-live="polite"
           >
-            {t}
-          </button>
-        ))}
+            {listening ? 'Listening… describe the pain' : 'Say what it feels like, or pick below'}
+          </p>
+        </div>
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
+          <X />
+        </Button>
       </div>
-      <label className="intake-rating">
-        <span>{entry ? `${intensity}/10` : 'Rate 0–10'}</span>
-        <input
-          type="range"
-          min="0"
-          max="10"
-          step="1"
-          value={intensity}
-          onChange={(e) => save({ intensity: Number(e.target.value) })}
+
+      <ToggleGroup
+        type="single"
+        value={entry?.type ?? ''}
+        onValueChange={(type) => type && save({ type })}
+        className="grid w-full grid-cols-3 gap-1.5"
+        aria-label="Pain type"
+      >
+        {PAIN_TYPES.map((t) => (
+          <ToggleGroupItem
+            key={t}
+            value={t}
+            className={cn(
+              'h-9 rounded-lg bg-secondary text-sm data-[state=on]:bg-secondary data-[state=on]:ring-2',
+              PAIN_STYLES[t].text,
+              PAIN_STYLES[t].ring,
+            )}
+          >
+            {PAIN_STYLES[t].label}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+
+      <div className="space-y-2">
+        <div className="flex items-baseline justify-between">
+          <span className="text-sm text-muted-foreground">How bad, 0 to 10</span>
+          <span className="text-2xl font-bold tabular-nums">{entry ? intensity : '–'}</span>
+        </div>
+        <Slider
+          min={0}
+          max={10}
+          step={1}
+          value={[intensity]}
+          onValueChange={([v]) => save({ intensity: v })}
+          aria-label="Pain rating"
         />
-      </label>
-      {entry?.note && <p className="intake-note">“{entry.note}”</p>}
+      </div>
+
+      {entry?.note && <p className="text-sm italic leading-snug text-muted-foreground">“{entry.note}”</p>}
+
       {entry && (
-        <button className="intake-remove" onClick={remove}>
-          Remove
-        </button>
+        <Button variant="ghost" size="sm" className="text-destructive" onClick={remove}>
+          Remove this mark
+        </Button>
       )}
     </div>
   )
 }
-

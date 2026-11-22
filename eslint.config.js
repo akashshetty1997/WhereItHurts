@@ -30,4 +30,9 @@ export default [
       ],
     },
   },
+  // shadcn's generated components export their style helpers next to the component.
+  {
+    files: ['src/components/ui/**/*.{js,jsx}'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
 ]
