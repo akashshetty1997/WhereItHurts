@@ -8,13 +8,13 @@ import { registerBody, emitRegionClick, glow, setListening } from './bodyApi'
 import { DEV_SEGMENTS, DEV_SEGMENT_GAP_MS } from './devSegments'
 import IntakePicker from './IntakePicker'
 import { toTen, toUnit } from './intensity'
+import { createPainMaterial, setPain, setGlow, setPainTime } from '../shaders/painMaterial'
 import './scene.css'
 
 // Placeholder body: capsules and boxes (PLAN fallback) until a GLB is ready.
 // The body faces +z (toward the camera), so the PATIENT's left is +x.
 const SKIN = '#cfd8dc'
 const BONE = '#f5f1e6'
-const PAIN_COLORS = { burning: '#ff5722', sharp: '#fff59d', aching: '#7e57c2' }
 // Used when the visit JSON has no color for a speaker (v1 mock says "doctor", v2 says "pt").
 const SPEAKER_COLORS = { pt: '#4FC3F7', doctor: '#4FC3F7', patient: '#FFB74D' }
 
@@ -31,10 +31,7 @@ const RING_LISTENING = '#FFB74D'
 const BACK_REGIONS = new Set(['upper_back', 'lower_back'])
 
 function part(geometry, position, region = null, color = SKIN) {
-  const mesh = new THREE.Mesh(
-    geometry,
-    new THREE.MeshStandardMaterial({ color, roughness: 0.6 }),
-  )
+  const mesh = new THREE.Mesh(geometry, createPainMaterial(color))
   mesh.position.set(...position)
   mesh.userData.region = region
   return mesh
@@ -274,32 +271,21 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
     observer.observe(mount)
     resize()
 
-    const paintColor = new THREE.Color()
     renderer.setAnimationLoop(() => {
       const t = clock.getElapsedTime()
+      setPainTime(t)
       const painted = new Map(visitStore.get().painted.map((p) => [p.region, p]))
       body.children.forEach((mesh) => {
-        const region = mesh.userData.region
         if (!mesh.isMesh) return
-        const mat = mesh.material
-        // Paint look (placeholder until the pain-type shader, D6): slow pulse in the type's color.
+        const region = mesh.userData.region
+        // Pain look (src/shaders/painMaterial.js), brightness from the 0–10 rating.
         const p = painted.get(region)
-        const paintLevel = p ? toUnit(p.intensity) * (0.6 + 0.4 * Math.sin(t * 2 * Math.PI)) : 0
-        if (p) paintColor.set(PAIN_COLORS[p.type] ?? SKIN)
-
+        setPain(mesh.material, p?.type ?? null, p ? toUnit(p.intensity) : 0)
+        // Speech glow on top, fading out.
         const g = glows.get(region)
         const glowLevel = g ? glowEnvelope(t, g.start) * GLOW_PEAK : 0
         if (g && glowLevel === 0 && t - g.start > GLOW_RISE_S) glows.delete(region)
-
-        if (glowLevel > paintLevel) {
-          mat.emissive.copy(g.color)
-          mat.emissiveIntensity = glowLevel
-        } else if (p) {
-          mat.emissive.copy(paintColor)
-          mat.emissiveIntensity = paintLevel
-        } else {
-          mat.emissiveIntensity = 0
-        }
+        setGlow(mesh.material, g ? g.color : null, glowLevel)
       })
 
       // Rings: selected = steady white, listening = pulsing orange.
@@ -330,10 +316,20 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
     })
 
     // Dev-only URL options: ?demo plays the script, ?view=back starts facing the back,
-    // ?glow=<region> lights one region (repeats every 3 s), ?fakevoice fakes speech after a tap.
+    // ?glow=<region> lights one region (repeats every 3 s), ?fakevoice fakes speech after a tap,
+    // ?paint=right_shoulder:burning:8,left_knee:aching:5 replaces the painted list.
     let devGlowTimer = null
     if (import.meta.env.DEV) {
       const params = new URLSearchParams(location.search)
+      const devPaint = params.get('paint')
+      if (devPaint) {
+        visitStore.setPainted(
+          devPaint.split(',').map((item) => {
+            const [region, type, rating] = item.split(':')
+            return { region, type, intensity: Number(rating ?? 5) }
+          }),
+        )
+      }
       if (params.get('view') === 'back') camera.position.set(0, 0.2, -7)
       const devRegion = params.get('glow')
       if (devRegion) {
