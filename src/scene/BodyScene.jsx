@@ -576,7 +576,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
     // Show Anatomy: the skin around the region fades to see-through (the shader's x-ray sphere),
     // the reference anatomy appears inside, and ambient occlusion is turned off so it isn't
     // shaded by the skin it's seen through. Closing fades back, then removes it.
-    const xray = { level: 0, goal: 0, a: new THREE.Vector3(), b: new THREE.Vector3(), radius: 0.28, showMark: true }
+    const xray = { level: 0, goal: 0, a: new THREE.Vector3(), b: new THREE.Vector3(), radius: 0.28, showMark: true, skin: 1, skinGoal: 1 }
     let anatomyRequest = 0
     let anatomyRegion = null // open (or opening)
     const setSkinSeeThrough = (on) => {
@@ -672,6 +672,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       anatomyRegion = null
       anatomy.hide()
       xray.goal = 0
+      xray.skinGoal = 1
+      xray.showMark = true
       anatomy.highlight(null)
       setAnatomyOpen(null)
       setStructure(null)
@@ -681,7 +683,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
     }
     function setAnatomyLayer(layer, visible) {
       if (layer === 'mark') xray.showMark = visible
-      else if (layer === 'skin') xray.goal = visible ? 1 : 1.6 // past 1 = skin fully gone around the region
+      else if (layer === 'skin') xray.skinGoal = visible ? 1 : 0 // 1 = see-through ghost, 0 = gone around the region
       else anatomy.setLayer(layer, visible)
     }
     const structureUnder = (e) => {
@@ -969,8 +971,12 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       }
 
       // Show Anatomy fade (about 0.6 s each way).
+      const xrayStep = timer.getDelta() / (reduceMotion ? 0.001 : 0.6)
+      if (xray.skin !== xray.skinGoal) {
+        xray.skin = xray.skinGoal > xray.skin ? Math.min(1, xray.skin + xrayStep) : Math.max(0, xray.skin - xrayStep)
+      }
       if (xray.level !== xray.goal) {
-        const step = timer.getDelta() / (reduceMotion ? 0.001 : 0.6)
+        const step = xrayStep
         xray.level = xray.goal > xray.level ? Math.min(xray.goal, xray.level + step) : Math.max(xray.goal, xray.level - step)
         if (xray.level === 0 && !anatomyRegion) {
           setSkinSeeThrough(false)
@@ -978,7 +984,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
           bloom.enabled = true
         }
       }
-      patientUniforms.setXray(xray.a, xray.b, xray.radius, xray.level, xray.showMark)
+      patientUniforms.setXray(xray.a, xray.b, xray.radius, xray.level, xray.showMark, xray.skin)
 
       // Reach Up: move the arm, and pulse the shoulder while it's inside the band where it hurts.
       if (simActive && simActive.update(timer.getDelta()) && t - lastBandGlow > 1.2) {

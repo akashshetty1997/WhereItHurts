@@ -42,6 +42,7 @@ const uniforms = {
   uXrayRadius: { value: 0.2 },
   uXrayLevel: { value: 0 },
   uXrayShowMark: { value: 1 },
+  uXraySkin: { value: 1 }, // 1 = see-through ghost skin, 0 = skin gone (animated between)
 }
 
 const index = Object.fromEntries(SHAPE_ORDER.map((id, i) => [id, i]))
@@ -59,8 +60,9 @@ export const patientUniforms = {
     uniforms.uTime.value = t
   },
   // Show Anatomy: a capsule a→b with radius in body space (meters); level 0 = normal skin,
-  // 1 = see-through.
-  setXray(a, b, radius, level, showMark = true) {
+  // 1 = see-through. skin: 1 = a ghost outline of the skin, 0 = no skin there at all.
+  setXray(a, b, radius, level, showMark = true, skin = 1) {
+    uniforms.uXraySkin.value = skin
     if (a) uniforms.uXrayA.value.copy(a)
     if (b) uniforms.uXrayB.value.copy(b)
     if (radius) uniforms.uXrayRadius.value = radius
@@ -117,6 +119,7 @@ const COMMON_GLSL = /* glsl */ `
   uniform float uXrayRadius;
   uniform float uXrayLevel;
   uniform float uXrayShowMark;
+  uniform float uXraySkin;
   varying vec3 vRest;
 
   float capsuleDist(vec3 p, vec3 a, vec3 b, float r) {
@@ -199,6 +202,14 @@ const DIFFUSE_GLSL = /* glsl */ `
   }
   // Inflamed skin reads darker and redder under the glow, so the color carries.
   diffuseColor.rgb *= 1.0 - 0.45 * anyPain;
+  // Show Anatomy: how far inside the see-through area this point is (0 outside, 1 inside, faded in).
+  float xrayIn = 0.0;
+  if (uXrayLevel > 0.0) {
+    float xd = capsuleDist(vRest, uXrayA, uXrayB, 0.0);
+    xrayIn = (1.0 - smoothstep(uXrayRadius * 0.7, uXrayRadius, xd)) * min(uXrayLevel, 1.0);
+  }
+  // "Pain Mark" off hides the patient's mark inside it.
+  float markShown = 1.0 - xrayIn * (1.0 - uXrayShowMark);
 `
 
 const EMISSIVE_GLSL = /* glsl */ `
@@ -208,7 +219,7 @@ const EMISSIVE_GLSL = /* glsl */ `
     for (int i = 0; i < SHAPES; i++) {
       // The rating drives the strength: 3/10 ≈ 0.3 (soft, no bloom), 9/10 ≈ 1.35 (blooms).
       float level = uPainType[i] > 0.5 ? 0.08 + 1.5 * pow(uPainLevel[i], 1.6) : 0.0;
-      vec3 pain = painLook(uPainType[i], vRest, uTime, uPainLevel[i]) * level * painMask[i] * painCore[i];
+      vec3 pain = painLook(uPainType[i], vRest, uTime, uPainLevel[i]) * level * painMask[i] * painCore[i] * markShown;
       vec3 glow = uGlowColor[i] * uGlowLevel[i] * painMask[i] * 0.9;
       extra = max(extra, max(pain, glow));
       extra += uRingColor[i] * uRingLevel[i] * ringBand[i] * 1.6;
@@ -225,16 +236,21 @@ const EMISSIVE_GLSL = /* glsl */ `
   }
 `
 
-// Show Anatomy: see-through skin near the region, solid outline at grazing angles (Fresnel), and
-// the patient's own pain mark kept visible unless "Hide Mark" is on.
+// Show Anatomy: see-through skin near the region.
+//   Skin on   a ghost: faint (alpha ~0.16) facing the camera, solid toward the outline (Fresnel), with
+//             a cool rim, so the shape of the arm or leg stays readable around the anatomy.
+//   Skin off  nothing there, only the anatomy.
+//   Pain Mark the patient's own mark stays solid and glowing on top, either way (unless switched off).
 const XRAY_GLSL = /* glsl */ `
-  if (uXrayLevel > 0.0) {
-    float d = capsuleDist(vRest, uXrayA, uXrayB, 0.0);
-    float inside = 1.0 - smoothstep(uXrayRadius * 0.7, uXrayRadius, d);
+  if (xrayIn > 0.0) {
     float facing = abs(dot(normalize(normal), normalize(vViewPosition)));
-    float rim = pow(1.0 - facing, 2.5);
-    float seeThrough = clamp(mix(1.0, 0.08 + 0.55 * rim, uXrayLevel * inside), 0.0, 1.0);
-    seeThrough = max(seeThrough, uXrayShowMark * min(uXrayLevel, 1.0) * inside * anyPain * 0.35);
+    float rim = pow(1.0 - facing, 2.0);
+    float ghost = clamp(0.16 + 0.75 * rim, 0.0, 1.0) * uXraySkin;
+    float seeThrough = mix(1.0, ghost, xrayIn);
+    float mark = clamp(anyPain * 1.8, 0.0, 1.0) * uXrayShowMark * xrayIn;
+    seeThrough = max(seeThrough, 0.45 * mark); // a tinted glow: the anatomy still shows through it
+    // Cool rim light so the ghost outline reads against the dark stage.
+    outgoingLight += vec3(0.35, 0.6, 0.8) * rim * 0.6 * uXraySkin * xrayIn * (1.0 - mark);
     diffuseColor.a *= seeThrough;
   }
   #include <opaque_fragment>
@@ -277,7 +293,7 @@ export function createPatientMaterial(source, restMatrix, maxAnisotropy = 8) {
       .replace('#include <emissivemap_fragment>', EMISSIVE_GLSL)
       .replace('#include <opaque_fragment>', XRAY_GLSL)
   }
-  material.customProgramCacheKey = () => 'patient-material-v5'
+  material.customProgramCacheKey = () => 'patient-material-v6'
   return material
 }
 
