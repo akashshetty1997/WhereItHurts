@@ -1,0 +1,62 @@
+import * as THREE from 'three'
+import { REGION_IDS } from '../regions'
+
+// Each region is a capsule (segment a→b with radius r) in the patient model's own space:
+// meters, feet at y = 0, facing +z, so the PATIENT's left is +x. Measured on public/models/patient.glb
+// (1.81 m, A-pose). The shader paints inside these shapes with a soft edge; taps map to the
+// nearest shape that contains the hit point.
+const v = (x, y, z) => new THREE.Vector3(x, y, z)
+
+export const REGION_SHAPES = {
+  // Painted on the forehead, temples and crown; tapping anywhere on the head or face counts.
+  head: { a: v(0, 1.74, 0.02), b: v(0, 1.8, -0.02), r: 0.1, tapR: 0.17, label: v(0.0, 1.86, 0.06) },
+  neck: { a: v(0, 1.45, -0.01), b: v(0, 1.56, 0.0), r: 0.07 },
+  upper_back: { a: v(0, 1.16, -0.1), b: v(0, 1.37, -0.1), r: 0.13 },
+  lower_back: { a: v(0, 0.93, -0.09), b: v(0, 1.07, -0.09), r: 0.13 },
+  left_leg: { a: v(0.1, 0.84, 0.0), b: v(0.095, 0.1, 0.0), r: 0.12, label: v(0.16, 0.72, 0.08) },
+  left_knee: { a: v(0.1, 0.47, 0.025), b: v(0.1, 0.53, 0.025), r: 0.075 },
+  right_shoulder: { a: v(-0.19, 1.43, 0.0), b: v(-0.21, 1.4, 0.0), r: 0.09 },
+}
+
+// Fixed order shared with the shader's uniform arrays.
+export const SHAPE_ORDER = REGION_IDS
+export const SHAPE_COUNT = SHAPE_ORDER.length
+
+const closest = new THREE.Vector3()
+const segment = new THREE.Line3()
+
+// Signed distance from p to a region's surface: < 0 inside.
+export function regionDistance(p, shape, radius = shape.r) {
+  segment.set(shape.a, shape.b)
+  segment.closestPointToPoint(p, true, closest)
+  return closest.distanceTo(p) - radius
+}
+
+// The region containing p (model space), the smallest one when shapes overlap
+// (the knee wins over the leg), or null.
+export function regionAt(p, slack = 0.015) {
+  let best = null
+  let bestScore = Infinity
+  for (const id of SHAPE_ORDER) {
+    const shape = REGION_SHAPES[id]
+    const d = regionDistance(p, shape, shape.tapR ?? shape.r)
+    if (d > slack) continue
+    const score = shape.r + Math.max(d, -shape.r) * 0.1 // prefer smaller shapes
+    if (score < bestScore) {
+      bestScore = score
+      best = id
+    }
+  }
+  return best
+}
+
+// Where a region's label sits (model space): the shape's middle, pushed out to the skin.
+export function regionAnchor(id) {
+  const { a, b, r, label } = REGION_SHAPES[id]
+  if (label) return label.clone()
+  const mid = a.clone().add(b).multiplyScalar(0.5)
+  const out = new THREE.Vector3(mid.x, 0, mid.z)
+  if (out.lengthSq() < 1e-6) out.set(0, 0, 1)
+  out.normalize().multiplyScalar(r * 0.6)
+  return mid.add(out)
+}
