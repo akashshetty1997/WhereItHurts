@@ -37,6 +37,6 @@ Speech models for `/api/transcribe` are optional; see [backend/README.md](backen
 | `src/scene/BodyScene.jsx` | Three.js scene; placeholder capsule body until the GLB lands |
 | `src/App.jsx` | Legend, transcript, mentions, catch cards |
 
-Region ids: `head`, `neck`, `lower_back`, `left_leg`, `left_knee`, `right_shoulder`.
+Region ids: `head`, `neck`, `upper_back`, `lower_back`, `left_leg`, `left_knee`, `right_shoulder`. Spine regions show the clinical term too: neck (cervical spine), upper back (thoracic spine), lower back (lumbar spine).
 
 Controls: left-click paints/selects, right-drag rotates, scroll zooms.

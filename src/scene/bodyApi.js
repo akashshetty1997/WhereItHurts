@@ -12,6 +12,12 @@ export function glow(region, color) {
   impl?.glow(region, color)
 }
 
+// Voice intake: show that the mic is open for this region (pulsing ring + "Listening…").
+// Call with null when the patient stops speaking. The result arrives through setPainted().
+export function setListening(region) {
+  impl?.setListening(region)
+}
+
 // Subscribe to region clicks. The callback gets a region id, or null for a miss. Returns unsubscribe.
 export function onRegionClick(callback) {
   clickListeners.add(callback)

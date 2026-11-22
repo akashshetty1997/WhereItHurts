@@ -192,7 +192,11 @@ Shared by everyone. Changing it means telling each other first. Changes from v1:
 - Left and right always mean the patient's side.
 - The speaker role changes from `doctor` to `pt`; `backend/app/constants.py` `SPEAKER_ROLES` changes with it.
 
-**Region ids (unchanged):** head, neck, lower_back, left_leg, left_knee, right_shoulder. Keep `src/regions.js` and `backend/app/constants.py` in sync.
+**Region ids (7):** head, neck, upper_back, lower_back, left_leg, left_knee, right_shoulder. Keep `src/regions.js` and `backend/app/constants.py` in sync.
+
+**Spine regions:** neck, upper_back and lower_back are the cervical, thoracic and lumbar spine. The UI labels them with both words, "Lower back (lumbar spine)" (`regionLabel()` in `src/regions.js`), so the patient learns the PT's term and the PT sees which level was marked. The 3D body shows a spine line on the back, one vertebra per level, lit with its region, so "Area assessed by PT" can outline a spine section.
+
+**If ahead after the 17:30 freeze:** hips and the other shoulder and knee.
 
 ## Contract functions
 
