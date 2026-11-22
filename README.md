@@ -36,6 +36,7 @@ curl localhost:8000/api/health                # {"transcription":"ok","llm":"cla
 | `src/panels/smartPass.js` | Claude improves each visit line in the background (missed body parts, rating, movement, follow-up) |
 | `src/panels/movementLog.js`, `MovementCheck.jsx` | Movement check (PT names a movement, patient rates before / after) |
 | `src/scene/anatomy.js`, `AnatomyOverlay.jsx` | **Show Anatomy** (PT or Testing mode): reference bones, muscles and joints inside a selected region, see-through skin, Explain to Patient, Add to Report |
+| `src/scene/movements.js`, `movementSim.js`, `MovementPanel.jsx`, `src/lib/spokenMovement.js` | **Movement simulations** (everyone): **Reach Up** (right shoulder), **Turn Head** (neck), **Bend Knee** (left knee). Slider or Play, one rule each, working muscles glow orange, mark the range where it hurts; each plays by itself when the PT asks for it during the visit ("raise your arm", "turn your head to the left", "bend your knee") |
 | `tools/anatomy/` | Builds `public/models/anatomy.glb` from BodyParts3D (`structures.json` lists each region's structures; `node tools/anatomy/build.mjs`) |
 | `src/panels/VisitWrapUp.jsx` | Summary: confirm cards, PT summary |
 | `src/visitStore.js` | The visit state (kept in the browser across a refresh; **New Visit** clears it) |
@@ -45,6 +46,8 @@ curl localhost:8000/api/health                # {"transcription":"ok","llm":"cla
 Region ids: `head`, `neck`, `upper_back`, `lower_back`, `left_leg`, `left_knee`, `right_shoulder` (left / right = the patient's side).
 
 Show Anatomy: select a body part, then **Show Anatomy** (or X). Click a bone or muscle for its plain name and what it does. Esc goes back to the skin. Each region's fit to each body is in `src/scene/patientRegions.js` (`anatomy`); in dev, `?fit=<region>:x,y,z,armDegrees,scale` tries another.
+
+Movement simulations: select **Right shoulder**, **Neck** or **Left knee**, then **Reach Up**, **Turn Head** or **Bend Knee**. Drag the slider or press Play. The rules: for every 3° the arm goes up, about 2° come from the shoulder joint and 1° from the shoulder blade; about half of a head turn happens between the top two neck bones (C1–C2); the knee is a hinge and the kneecap glides half as far. Typical movement, for illustration. Tests: `npm test`.
 
 Controls: click a body part to select it, drag to turn, Shift-drag to slide up or down, scroll to zoom. No mouse: the **View Controls** panel, or ← → turn, ↑ ↓ tilt, Shift+↑ ↓ slide, + − zoom, F L B R sides, 0 whole body, ? controls.
 

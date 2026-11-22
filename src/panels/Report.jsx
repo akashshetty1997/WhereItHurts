@@ -10,6 +10,7 @@ import { REGIONS, regionLabel } from '@/regions'
 import { toTen } from '@/scene/intensity'
 import { goalDiscussed } from '@/visitStore'
 import { ANATOMY_PURPOSE, groupAnatomyNotes } from '@/lib/visitDisplay'
+import { describePainArc } from '@/scene/movements'
 
 const CREDIT = 'Anatomy: BodyParts3D, © DBCLS, CC BY 4.0 (reference illustrations, not scans).'
 const lower = (region) => REGIONS[region]?.toLowerCase() ?? 'symptom'
@@ -117,6 +118,9 @@ function PtReport({ visit, missed, maps, user }) {
         ) : (
           <p>Nothing marked.</p>
         )}
+        {Object.entries(visit.painArcs ?? {}).map(([region, arc]) => (
+          <p key={region}>{describePainArc(region, arc)} (marked in the movement simulation).</p>
+        ))}
       </Section>
 
       <Section title="Movement Checks">

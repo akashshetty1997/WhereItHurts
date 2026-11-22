@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { REGIONS, regionLabel } from '@/regions'
 import { toTen } from '@/scene/intensity'
 import { visitStore, goalDiscussed } from '@/visitStore'
+import { describePainArc } from '@/scene/movements'
 import { PAIN_STYLES, ANATOMY_PURPOSE, groupAnatomyNotes } from '@/lib/visitDisplay'
 import { cn } from '@/lib/utils'
 
@@ -68,6 +69,11 @@ export function PtSummary({ visit, missed }) {
         ) : (
           'Nothing marked'
         )}
+        {Object.entries(visit.painArcs ?? {}).map(([region, arc]) => (
+          <p key={region} className="mt-1">
+            {describePainArc(region, arc)}
+          </p>
+        ))}
       </Row>
       <Row title="Movement checks">
         {checks.length ? (

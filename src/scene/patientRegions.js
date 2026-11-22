@@ -9,11 +9,11 @@ const v = (x, y, z) => new THREE.Vector3(x, y, z)
 
 // Show Anatomy fit (src/scene/anatomy.js): the reference anatomy is a 1.70 m body with its arms
 // hanging straight. `anchor` (a joint in public/models/anatomy.glb) lands on `target`, the whole
-// region scales by `scale` about it, and the arm bone swings out about `arm.pivot` by `arm.z`
-// degrees (negative = the patient's right arm away from the body) to match the A-pose; the
-// shoulder muscles swing `muscleShare` of that.
+// region scales by `scale` about it, and the arm (bone + deltoid) swings out about `arm.pivot` by
+// `arm.z` degrees (negative = the patient's right arm away from the body) to match the A-pose.
+// Reach Up (src/scene/movements.js) raises it from there.
 const ARM_BONE = ['FMA23130'] // humerus
-const ARM_MUSCLES = ['FMA34680', 'FMA34682', 'FMA34684'] // deltoid parts: swing part of the way
+const ARM_MUSCLES = ['FMA34680', 'FMA34682', 'FMA34684'] // deltoid parts
 
 export const PATIENTS = {
   male: {
@@ -36,7 +36,7 @@ export const PATIENTS = {
         // the mesh; try others in dev with ?fit=right_shoulder:x,y,z,arm).
         target: v(-0.175, 1.38, -0.02),
         scale: 1.15, // broad, athletic shoulders: a bit bigger than height alone (1.065)
-        arm: { pivot: 'right_glenohumeral_joint', z: -42, fma: ARM_BONE, muscles: ARM_MUSCLES, muscleShare: 1 },
+        arm: { pivot: 'right_glenohumeral_joint', z: -42, fma: ARM_BONE, muscles: ARM_MUSCLES },
       },
       // The rest: scaled by height (1.81 / 1.70), then moved so the spine sits ~1.5 cm under the
       // back's skin and the bones run down the middle of the limb (measured on the mesh).
@@ -71,7 +71,7 @@ export const PATIENTS = {
         anchor: 'right_glenohumeral_joint',
         target: v(-0.155, 1.34, -0.062),
         scale: 1.08,
-        arm: { pivot: 'right_glenohumeral_joint', z: -45, fma: ARM_BONE, muscles: ARM_MUSCLES, muscleShare: 1 },
+        arm: { pivot: 'right_glenohumeral_joint', z: -45, fma: ARM_BONE, muscles: ARM_MUSCLES },
       },
       neck: { anchor: 'c4_c5_joint', target: v(-0.026, 1.521, -0.053), scale: 1.024 },
       upper_back: { anchor: 't6_t7_joint', target: v(-0.013, 1.338, -0.082), scale: 1.024 },

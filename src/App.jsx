@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import BodyScene from './scene/BodyScene'
-import { selectRegion } from './scene/bodyApi'
+import { selectRegion, playMovement } from './scene/bodyApi'
+import { spokenMovement } from './lib/spokenMovement'
 import AppHeader from './panels/AppHeader'
 import IntakePanel from './panels/IntakePanel'
 import ConversationPanel from './panels/ConversationPanel'
@@ -32,6 +33,27 @@ export default function App() {
   // so does what Claude adds to a line afterwards (src/panels/smartPass.js).
   useEffect(() => visitStore.onSegment(onLine), [])
   useEffect(() => visitStore.onSegmentUpdate(onLineUpdate), [])
+  // During the visit, a movement the PT asks for ("Raise your right arm", "Turn your head to the
+  // left", "Bend your knee") plays on the body, once per line (the smart pass may add the movement
+  // to a line a few seconds later).
+  const modeRef = useRef(mode)
+  modeRef.current = mode
+  useEffect(() => {
+    const played = new Set()
+    const check = (segment) => {
+      if (modeRef.current !== 'visit' || played.has(segment.id)) return
+      const asked = spokenMovement(segment)
+      if (!asked) return
+      played.add(segment.id)
+      playMovement(asked.region, `PT asked: “${segment.text}”`, asked.direction)
+    }
+    const offNew = visitStore.onSegment(check)
+    const offUpdate = visitStore.onSegmentUpdate(check)
+    return () => {
+      offNew()
+      offUpdate()
+    }
+  }, [])
   const missed = mode === 'ended' ? unmentioned(visit) : []
 
   function newVisit() {

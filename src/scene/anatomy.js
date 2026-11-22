@@ -4,10 +4,12 @@
 // public/models/anatomy.glb is built by tools/anatomy/build.mjs in the same body frame as the
 // patient (meters, feet at y = 0, facing +z, patient's left = +x) but for a 1.70 m body in the
 // anatomical position (arms hanging straight). Each patient's fit (src/scene/patientRegions.js →
-// anatomy) moves one joint onto the patient, scales, and swings the arm out to the model's A-pose.
+// anatomy) moves one joint onto the patient, scales, and swings the arm out to the model's A-pose
+// (src/scene/movements.js builds the moving parts).
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
+import { buildRig } from './movements'
 
 const URL = '/models/anatomy.glb'
 
@@ -94,34 +96,8 @@ export function createAnatomy(parent, fits) {
       placed.position.copy(fit.target).sub(anchor.clone().multiplyScalar(fit.scale))
       if (fit.rotateY) placed.rotation.y = THREE.MathUtils.degToRad(fit.rotateY)
       placed.add(group)
-      // A-pose: the arm bone swings out about the shoulder joint. Muscles that start above the
-      // joint (the deltoid starts on the collarbone and shoulder blade) swing only part of the way,
-      // so they still cap the shoulder instead of sliding down the arm with the bone.
-      if (fit.arm) {
-        const pivotAt = joints[fit.arm.pivot].position.clone()
-        const swingBy = (share) => {
-          const pivot = new THREE.Group()
-          pivot.position.copy(pivotAt)
-          group.add(pivot)
-          const swing = new THREE.Group()
-          swing.rotation.set(
-            THREE.MathUtils.degToRad((fit.arm.x ?? 0) * share),
-            0,
-            THREE.MathUtils.degToRad((fit.arm.z ?? 0) * share),
-          )
-          pivot.add(swing)
-          return swing
-        }
-        const full = swingBy(1)
-        const part = swingBy(fit.arm.muscleShare ?? 1)
-        for (const mesh of meshes) {
-          const fma = mesh.userData.fma
-          const target = fit.arm.fma.includes(fma) ? full : fit.arm.muscles?.includes(fma) ? part : null
-          if (!target) continue
-          target.add(mesh)
-          mesh.position.sub(pivotAt)
-        }
-      }
+      // The movement simulation's rig (Reach Up, Turn Head, Bend Knee), if this region has one.
+      const rig = buildRig(region, group, meshes, joints, fit)
       placed.visible = false
       root.add(placed)
       // Labels and the see-through sphere use the joints' positions in body space.
@@ -129,15 +105,27 @@ export function createAnatomy(parent, fits) {
       const jointsBody = Object.fromEntries(
         Object.entries(joints).map(([id, o]) => [id, { ...o.userData, position: o.position.clone().applyMatrix4(placed.matrix) }]),
       )
-      regions.set(region, { group: placed, meshes, joints: jointsBody, fit })
+      regions.set(region, { group: placed, regionGroup: group, meshes, joints: jointsBody, fit, rig })
     }
   }
 
+  // Loads once; a failed load can be tried again.
+  const ensure = () =>
+    (ready ??= loadGltf()
+      .then(build)
+      .catch((error) => {
+        ready = null
+        throw error
+      }))
+
   return {
     // Loads once; resolves to whether this region has anatomy.
+    // Start loading early (Record the Visit), so the first Reach Up doesn't wait for the file.
+    preload() {
+      return ensure().catch(() => {})
+    },
     async show(region) {
-      ready ??= loadGltf().then(build)
-      await ready
+      await ensure()
       const entry = regions.get(region)
       regions.forEach((r) => (r.group.visible = false))
       current = entry ? region : null

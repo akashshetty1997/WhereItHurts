@@ -41,8 +41,10 @@ Three people: **Narrator**, **PT**, **Patient**. The patient drives the laptop. 
 | 4 | Patient | Sometimes it runs from my neck down into my shoulder. | **Pulse: neck → right shoulder** |
 | 5 | PT | How bad is the shoulder right now, zero to ten? | Shoulder glows |
 | 6 | Patient | About a five. | Rating 5 (before) |
-| 7 | PT | Let me check your neck. Slowly turn your head to the left. | Movement: turn head left; neck = area assessed |
+| 7 | PT | Let me check your neck. Slowly turn your head to the left. | Movement: turn head left; neck = area assessed. **Turn Head plays by itself:** the neck bones turn, the top two most |
 | 8 | Patient | Oh, the shoulder feels better. Maybe a two. | After 2, Better |
+| 8a | PT | Now raise your right arm up for me, slowly. | **Reach Up plays by itself:** the arm bone rises inside the see-through shoulder, the shoulder blade turns (2:1 rule), working muscles glow orange; then back to the whole body |
+| 8b | Patient | Ow, it starts hurting about halfway up. | (Optional, if time: PT clicks Right shoulder → **Reach Up**, drags to 90°, **Hurts From Here**, drags to 150°, **To Here**: a pink band glows around the shoulder and goes into the reports) |
 | 9 | PT | Let's work on your neck and shoulder, with exercises at home. | Neck and shoulder glow |
 | 10 | PT | And let's book a follow-up in two weeks. | Follow-up in the summary |
 | 11 | Patient | Okay, thanks. | |
@@ -57,6 +59,7 @@ The knee is never mentioned on purpose: that's the catch.
 | Nothing appears after speaking | Check the green level bar moves; pause a little longer after the line |
 | Server not reachable | Restart the backend; if it can't come back in 20 s, switch to the backup video |
 | Movement check didn't fill in | The PT types it into the Movement Check card (Before / After / Better) |
-| Judge's turn | **New Visit**, let them mark a spot by voice and say one sentence |
+| Judge's turn | **New Visit**, let them mark a spot by voice and say one sentence, or click Right shoulder → **Reach Up** and drag the slider |
+| A movement didn't play (lines 7, 8a) | Click the body part → **Turn Head** / **Reach Up** → Play (▶) |
 
 Rehearse three times, once in the demo room with the real mic.
