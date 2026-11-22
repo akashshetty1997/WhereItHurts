@@ -61,9 +61,14 @@
    the person picks Light or Dark in the header (src/lib/theme.js puts .dark on <html>).
    Color is reserved for meaning: who is speaking, the pain type, the missed-pain flag. Each meaning
    color has a darker light-mode variant so text stays at 4.5:1 or more on white.
-   The 3D stage is always dark (App.jsx puts .dark on it), so glows read in both modes. */
+   The 3D stage follows the mode too: a white studio in light, charcoal in dark (BodyScene reads the
+   --stage-* values and rebuilds its backdrop and floor when the mode changes). */
 :root {
-    --stage: #0a0a0a;
+    --stage: #d9d9d9;
+    --stage-center: #ffffff;
+    --stage-mid: #ededed;
+    --stage-floor: rgb(0 0 0 / 0.1);
+    --stage-ring: #a3a3a3;
     --background: #ffffff;
     --foreground: #0a0a0a;
     --card: #ffffff;
@@ -109,6 +114,11 @@
 }
 
 .dark {
+    --stage: #141414;
+    --stage-center: #3a3a3a;
+    --stage-mid: #232323;
+    --stage-floor: rgb(255 255 255 / 0.1);
+    --stage-ring: #737373;
     --background: #0a0a0a;
     --foreground: #fafafa;
     --card: #171717;

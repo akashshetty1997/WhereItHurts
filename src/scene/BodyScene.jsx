@@ -21,8 +21,22 @@ import IntakePicker from './IntakePicker'
 import { toTen, toUnit } from './intensity'
 import { PATIENTS, DEFAULT_PATIENT, SHAPE_ORDER, regionAt, regionAnchor } from './patientRegions'
 import { createPatientMaterial, patientUniforms } from '../shaders/patientMaterial'
-import { Focus, Maximize2, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  ChevronsDown,
+  ChevronsUp,
+  Focus,
+  Gamepad2,
+  Maximize2,
+  RotateCcw,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { regionLabel as fullRegionLabel } from '../regions'
 import './scene.css'
 
@@ -34,7 +48,6 @@ const HDRI_URL = '/hdri/studio_small_08_1k.hdr'
 
 // Used when the visit JSON has no color for a speaker (v1 mock says "doctor", v2 says "pt").
 const SPEAKER_COLORS = { pt: '#4FC3F7', doctor: '#4FC3F7', patient: '#F78FB3' }
-const ACCENT = '#7fd6ff'
 
 // Glow envelope, in seconds: quick rise, then a slow fade.
 const GLOW_RISE_S = 0.15
@@ -98,6 +111,32 @@ const MOVE_SECONDS = 0.9
 const MIN_DISTANCE = 0.7
 const MAX_DISTANCE = 9
 const ZOOM_STEP = 1.45
+const CONTROLS_KEY = 'whereithurts.viewControls'
+function readControlsOpen() {
+  try {
+    return localStorage.getItem(CONTROLS_KEY) !== 'closed'
+  } catch {
+    return true
+  }
+}
+function saveControlsOpen(open) {
+  try {
+    localStorage.setItem(CONTROLS_KEY, open ? 'open' : 'closed')
+  } catch {
+    // Blocked storage: the panel just opens again next time.
+  }
+}
+// View controls without a mouse or trackpad (buttons and keys): one step of turning or tilting.
+const TURN_STEP = Math.PI / 8
+const TILT_STEP = 0.2
+// Slide: move the view up or down the body (the orbit center's height), within these limits.
+const SLIDE_STEP = 0.2
+const MIN_TARGET_Y = 0.1
+const MAX_TARGET_Y = 1.9
+const MIN_PHI = 0.2 // same limits as the orbit controls below
+const MAX_PHI = 1.85
+// Camera angle around the patient for each side (the patient faces +z; their left is +x).
+const SIDE_VIEWS = { front: 0, left: Math.PI / 2, back: Math.PI, right: -Math.PI / 2 }
 // A press that moves less than this (px) and ends quickly is a tap, not a drag-to-rotate.
 const TAP_MAX_MOVE = 6
 const TAP_MAX_MS = 600
@@ -117,22 +156,37 @@ const CLOSE_UP_THETA = {
 }
 const CLOSE_UP_PHI = 1.38 // a little above eye level
 
-// Studio backdrop: neutral near-black (the stage is dark in both appearances), lighter behind the patient.
-function makeBackground() {
+// Stage colors from the theme (src/index.css --stage-*), so the studio follows light and dark mode.
+function stageColors() {
+  const css = getComputedStyle(document.documentElement)
+  const value = (name) => css.getPropertyValue(name).trim()
+  return {
+    center: value('--stage-center'),
+    mid: value('--stage-mid'),
+    edge: value('--stage'),
+    floor: value('--stage-floor'),
+    ring: value('--stage-ring'),
+  }
+}
+
+// Studio backdrop: lighter behind the patient, fading to the edge color.
+function makeBackground(colors = stageColors()) {
   const size = 512
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = size
   const ctx = canvas.getContext('2d')
   const g = ctx.createRadialGradient(size / 2, size * 0.42, 0, size / 2, size / 2, size * 0.8)
-  g.addColorStop(0, '#2a2a2a')
-  g.addColorStop(0.55, '#161616')
-  g.addColorStop(1, '#0a0a0a')
+  g.addColorStop(0, colors.center)
+  g.addColorStop(0.55, colors.mid)
+  g.addColorStop(1, colors.edge)
   ctx.fillStyle = g
   ctx.fillRect(0, 0, size, size)
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
   return texture
 }
+
+const floorPool = (colors) => radialTexture([[0, colors.floor], [1, 'rgba(0,0,0,0)']])
 
 function radialTexture(stops) {
   const size = 256
@@ -150,7 +204,7 @@ function radialTexture(stops) {
 
 // Floor: a shadow catcher (only the patient's shadow shows), a soft pool of light under the
 // feet that fades into the backdrop, and one thin accent ring.
-function buildFloor() {
+function buildFloor(colors = stageColors()) {
   const floor = new THREE.Group()
   const shadowCatcher = new THREE.Mesh(
     new THREE.PlaneGeometry(8, 8),
@@ -162,12 +216,7 @@ function buildFloor() {
 
   const pool = new THREE.Mesh(
     new THREE.PlaneGeometry(3.4, 3.4),
-    new THREE.MeshBasicMaterial({
-      map: radialTexture([[0, 'rgba(120,160,210,0.32)'], [0.45, 'rgba(60,90,140,0.12)'], [1, 'rgba(0,0,0,0)']]),
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    }),
+    new THREE.MeshBasicMaterial({ map: floorPool(colors), transparent: true, depthWrite: false }),
   )
   pool.rotation.x = -Math.PI / 2
   pool.position.y = 0.001
@@ -175,12 +224,13 @@ function buildFloor() {
 
   const ring = new THREE.Mesh(
     new THREE.RingGeometry(0.62, 0.632, 128),
-    new THREE.MeshBasicMaterial({ color: ACCENT, transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending }),
+    new THREE.MeshBasicMaterial({ color: colors.ring, transparent: true, opacity: 0.5, depthWrite: false }),
   )
   ring.rotation.x = -Math.PI / 2
   ring.position.y = 0.002
   floor.add(ring)
   floor.userData.ring = ring
+  floor.userData.pool = pool
   floor.traverse((o) => (o.raycast = () => {}))
   return floor
 }
@@ -248,6 +298,14 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
   const [selected, setSelected] = useState(null)
   const [listening, setListeningState] = useState(null)
   const [loaded, setLoaded] = useState(false)
+  // The no-mouse controls panel: open by default, remembered per browser.
+  const [showControls, setShowControlsState] = useState(() => readControlsOpen())
+  const setShowControls = (next) =>
+    setShowControlsState((open) => {
+      const value = typeof next === 'function' ? next(open) : next
+      saveControlsOpen(value)
+      return value
+    })
   const selectedRef = useRef(null)
   const listeningRef = useRef(null)
   selectedRef.current = selected
@@ -323,15 +381,29 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
     key.shadow.radius = 5
     key.shadow.normalBias = 0.02
     key.shadow.bias = -0.0002
-    const rimCool = new THREE.DirectionalLight('#9fd6ff', 2.6)
+    const rimCool = new THREE.DirectionalLight('#f2f2f2', 2.2)
     rimCool.position.set(-2.6, 2.6, -3.0)
     const rimWarm = new THREE.DirectionalLight('#ffcfa6', 1.3)
     rimWarm.position.set(2.8, 1.8, -2.6)
-    const fill = new THREE.HemisphereLight('#cfe4ff', '#1a140f', 0.35)
+    const fill = new THREE.HemisphereLight('#ececec', '#141414', 0.35)
     scene.add(key, key.target, rimCool, rimWarm, fill)
 
     const floor = buildFloor()
     scene.add(floor)
+    // Light/dark switch (the .dark class on <html>): rebuild the backdrop and floor colors.
+    const applyStage = () => {
+      const colors = stageColors()
+      const previous = scene.background
+      scene.background = makeBackground(colors)
+      previous?.dispose()
+      const pool = floor.userData.pool.material
+      pool.map.dispose()
+      pool.map = floorPool(colors)
+      pool.needsUpdate = true
+      floor.userData.ring.material.color.set(colors.ring)
+    }
+    const themeObserver = new MutationObserver(applyStage)
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
 
     const patientRoot = new THREE.Group()
     scene.add(patientRoot)
@@ -430,13 +502,32 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.target.copy(CAMERA_TARGET)
     controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE }
-    controls.enablePan = false
+    // Shift / Ctrl / ⌘ + drag slides the body up or down (OrbitControls pans on a modified left drag).
+    // Locked to vertical: sideways and depth movement are undone, and the height stays in range.
+    controls.enablePan = true
+    controls.screenSpacePanning = true
+    let panLock = null
+    controls.addEventListener('start', () => (panLock = controls.target.clone()))
+    controls.addEventListener('end', () => (panLock = null))
+    controls.addEventListener('change', () => {
+      if (!panLock) return
+      const t = controls.target
+      const fix = new THREE.Vector3(
+        panLock.x - t.x,
+        THREE.MathUtils.clamp(t.y, MIN_TARGET_Y, MAX_TARGET_Y) - t.y,
+        panLock.z - t.z,
+      )
+      if (fix.lengthSq() > 0) {
+        t.add(fix)
+        camera.position.add(fix)
+      }
+    })
     controls.enableDamping = true
     controls.zoomToCursor = true
     controls.minDistance = MIN_DISTANCE
     controls.maxDistance = MAX_DISTANCE
-    controls.minPolarAngle = 0.2
-    controls.maxPolarAngle = 1.85
+    controls.minPolarAngle = MIN_PHI
+    controls.maxPolarAngle = MAX_PHI
     const onContextMenu = (e) => e.preventDefault()
     renderer.domElement.addEventListener('contextmenu', onContextMenu)
 
@@ -501,16 +592,36 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
     }
     renderer.domElement.addEventListener('pointermove', onPointerMove)
     renderer.domElement.addEventListener('pointerleave', onPointerLeave)
-    // Keyboard: arrows turn the body, + / − zoom, 0 shows the whole body, Esc clears the selection.
-    // Ignored while typing, and T / P stay with the talk buttons.
+    // Keyboard (no mouse or trackpad needed): ← → turn, ↑ ↓ tilt, Shift+↑ ↓ or Page Up / Down slide, + / − zoom, F / L / B / R show
+    // the front, the patient's left side, the back, the right side, 0 the whole body, ? the
+    // controls panel, Esc clears the selection. Ignored while typing; T / P stay with the talk buttons.
+    const KEY_ACTIONS = {
+      ArrowLeft: () => turn(-1),
+      ArrowRight: () => turn(1),
+      ArrowUp: () => tilt(-1),
+      ArrowDown: () => tilt(1),
+      PageUp: () => slide(1),
+      PageDown: () => slide(-1),
+      '+': () => zoom(1 / ZOOM_STEP),
+      '=': () => zoom(1 / ZOOM_STEP),
+      '-': () => zoom(ZOOM_STEP),
+      _: () => zoom(ZOOM_STEP),
+      0: () => resetView(),
+      f: () => showSide('front'),
+      l: () => showSide('left'),
+      b: () => showSide('back'),
+      r: () => showSide('right'),
+      '?': () => setShowControls((open) => !open),
+    }
     const onKeyDown = (e) => {
-      if (e.target.closest?.('input, textarea, [contenteditable="true"]')) return
-      if (e.key === 'Escape') setSelected(null)
-      else if (e.key === 'ArrowLeft') moveBy({ thetaDelta: -Math.PI / 8 })
-      else if (e.key === 'ArrowRight') moveBy({ thetaDelta: Math.PI / 8 })
-      else if (e.key === '+' || e.key === '=') zoom(1 / ZOOM_STEP)
-      else if (e.key === '-' || e.key === '_') zoom(ZOOM_STEP)
-      else if (e.key === '0') resetView()
+      if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.key === 'Escape') return setSelected(null)
+      const shiftSlide = e.shiftKey && { ArrowUp: () => slide(1), ArrowDown: () => slide(-1) }[e.key]
+      const action = shiftSlide || KEY_ACTIONS[e.key.length === 1 ? e.key.toLowerCase() : e.key]
+      if (!action) return
+      e.preventDefault() // arrows would otherwise scroll a panel
+      action()
     }
     window.addEventListener('keydown', onKeyDown)
 
@@ -565,6 +676,19 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       moveTo({ target: CAMERA_TARGET, radius: spherical.radius, phi: spherical.phi, theta: 0 })
     }
     const turnAround = () => moveTo({ thetaDelta: Math.PI }, 1.2)
+    const turn = (direction) => moveBy({ thetaDelta: direction * TURN_STEP })
+    // Slide the body up (+1) or down (-1) in view: the orbit center moves the other way.
+    const slide = (direction) => {
+      const t = currentView().target
+      const y = THREE.MathUtils.clamp(t.y - direction * SLIDE_STEP, MIN_TARGET_Y, MAX_TARGET_Y)
+      moveTo({ target: new THREE.Vector3(t.x, y, t.z) }, 0.35)
+    }
+    const tilt = (direction) =>
+      moveTo({ phi: THREE.MathUtils.clamp(currentView().phi + direction * TILT_STEP, MIN_PHI, MAX_PHI) }, 0.45)
+    const showSide = (side) => {
+      spherical.setFromVector3(CAMERA_HOME.clone().sub(CAMERA_TARGET))
+      moveTo({ target: CAMERA_TARGET, radius: spherical.radius, phi: spherical.phi, theta: SIDE_VIEWS[side] })
+    }
     // Close-up: aim at the middle of the region's shape, from its side, near enough to fill the view.
     const mid = new THREE.Vector3()
     function focusRegion(region) {
@@ -579,7 +703,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         theta: CLOSE_UP_THETA[region] ?? 0,
       })
     }
-    viewRef.current = { zoom, resetView, turnAround, focusRegion }
+    viewRef.current = { zoom, resetView, turnAround, focusRegion, turn, tilt, slide, showSide }
     renderer.setAnimationLoop(() => {
       timer.update()
       const t = timer.getElapsed()
@@ -613,7 +737,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       // A person never stands perfectly still: a slow, tiny weight shift from the feet.
       patientRoot.rotation.z = Math.sin(t * 0.55) * 0.004
       patientRoot.rotation.x = Math.sin(t * 0.37 + 1.3) * 0.0025
-      floor.userData.ring.material.opacity = 0.28 + 0.1 * Math.sin(t * 1.2)
+      floor.userData.ring.material.opacity = 0.45 + 0.1 * Math.sin(t * 1.2)
 
       // Pain-path pulse: runs PULSE_RUNS times, fading in and out at each end of the route.
       if (pulseRun) {
@@ -763,6 +887,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         }
       })
       scene.environment?.dispose()
+      themeObserver.disconnect()
       scene.background.dispose()
       composer.dispose()
       target.dispose()
@@ -786,15 +911,22 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       <div ref={mountRef} className="scene" />
       {/* View controls: a floating functional layer over the 3D content. */}
       <div className="pointer-events-none absolute inset-x-4 top-4 flex items-start justify-between gap-3">
-        <p className="rounded-full bg-background/70 px-3 py-1.5 text-sm text-muted-foreground backdrop-blur">
-          Drag to turn · Double-click a part to zoom in
+        <p className="rounded-full bg-card/85 px-3 py-1.5 text-sm text-muted-foreground ring-1 ring-border backdrop-blur">
+          Drag to turn · Shift-drag to slide up or down · Double-click a part to zoom in
         </p>
         <div className="pointer-events-auto flex flex-col items-end gap-2">
-          <div className="flex gap-1 rounded-xl bg-background/70 p-1 backdrop-blur">
+          <div className="flex gap-1 rounded-xl bg-card/85 p-1 ring-1 ring-border backdrop-blur">
             <ViewButton label="Zoom Out (−)" onClick={() => viewRef.current?.zoom(ZOOM_STEP)} icon={ZoomOut} iconOnly />
             <ViewButton label="Zoom In (+)" onClick={() => viewRef.current?.zoom(1 / ZOOM_STEP)} icon={ZoomIn} iconOnly />
             <ViewButton label="Turn Around" onClick={() => viewRef.current?.turnAround()} icon={RotateCcw} />
             <ViewButton label="Whole Body" onClick={() => viewRef.current?.resetView()} icon={Maximize2} />
+            <ViewButton
+              label="Controls"
+              title="Show or hide the view controls (?)"
+              onClick={() => setShowControls((open) => !open)}
+              icon={Gamepad2}
+              pressed={showControls}
+            />
           </div>
           {selected && (
             <Button variant="default" className="gap-2" onClick={() => viewRef.current?.focusRegion(selected)}>
@@ -804,6 +936,11 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
           )}
         </div>
       </div>
+      {showControls && (
+        <div className="absolute right-4 bottom-4">
+          <ViewControls view={viewRef} onClose={() => setShowControls(false)} />
+        </div>
+      )}
       {!loaded && (
         <p className="absolute inset-x-0 top-1/2 text-center text-sm text-muted-foreground">Loading the patient…</p>
       )}
@@ -819,19 +956,82 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
   )
 }
 
-function ViewButton({ label, icon, onClick, iconOnly = false }) {
+function ViewButton({ label, title, icon, onClick, iconOnly = false, pressed }) {
   const Icon = icon
   return (
     <Button
       variant="ghost"
       size={iconOnly ? 'icon' : 'default'}
-      className={iconOnly ? 'size-9' : 'h-9 gap-2'}
+      className={cn(iconOnly ? 'size-9' : 'h-9 gap-2', 'aria-pressed:bg-secondary')}
       onClick={onClick}
       aria-label={label}
-      title={label}
+      aria-pressed={pressed}
+      title={title ?? label}
     >
       <Icon className="size-4" aria-hidden />
       {!iconOnly && label}
     </Button>
+  )
+}
+
+// For people who don't use a mouse or trackpad: every camera move as a button, with its key.
+// Opens from the gamepad button or with "?"; every control is reachable with Tab.
+function ViewControls({ view, onClose }) {
+  const act = (name, ...args) => () => view.current?.[name](...args)
+  return (
+    <section
+      aria-label="View controls"
+      className="w-64 space-y-3 rounded-xl bg-card/90 p-3 text-sm text-foreground shadow-lg ring-1 ring-border backdrop-blur"
+    >
+      <div className="flex items-center justify-between">
+        <h2 className="font-bold">View Controls</h2>
+        <Button variant="ghost" size="sm" onClick={onClose}>
+          Hide
+        </Button>
+      </div>
+      <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2">
+        <span className="text-muted-foreground">Turn</span>
+        <div className="flex gap-1">
+          <ViewButton label="Turn Left (←)" onClick={act('turn', -1)} icon={ChevronLeft} iconOnly />
+          <ViewButton label="Turn Right (→)" onClick={act('turn', 1)} icon={ChevronRight} iconOnly />
+        </div>
+        <span className="text-muted-foreground">Tilt</span>
+        <div className="flex gap-1">
+          <ViewButton label="Look From Above (↑)" onClick={act('tilt', -1)} icon={ChevronUp} iconOnly />
+          <ViewButton label="Look From Below (↓)" onClick={act('tilt', 1)} icon={ChevronDown} iconOnly />
+        </div>
+        <span className="text-muted-foreground">Slide</span>
+        <div className="flex gap-1">
+          <ViewButton label="Slide Body Up (Shift+↑)" onClick={act('slide', 1)} icon={ChevronsUp} iconOnly />
+          <ViewButton label="Slide Body Down (Shift+↓)" onClick={act('slide', -1)} icon={ChevronsDown} iconOnly />
+        </div>
+        <span className="text-muted-foreground">Zoom</span>
+        <div className="flex gap-1">
+          <ViewButton label="Zoom Out (−)" onClick={act('zoom', ZOOM_STEP)} icon={ZoomOut} iconOnly />
+          <ViewButton label="Zoom In (+)" onClick={act('zoom', 1 / ZOOM_STEP)} icon={ZoomIn} iconOnly />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-1">
+        <Button variant="outline" size="sm" onClick={act('showSide', 'front')} title="Front (F)">
+          Front <kbd className="ml-auto text-xs text-muted-foreground">F</kbd>
+        </Button>
+        <Button variant="outline" size="sm" onClick={act('showSide', 'back')} title="Back (B)">
+          Back <kbd className="ml-auto text-xs text-muted-foreground">B</kbd>
+        </Button>
+        <Button variant="outline" size="sm" onClick={act('showSide', 'left')} title="Patient's left side (L)">
+          Left Side <kbd className="ml-auto text-xs text-muted-foreground">L</kbd>
+        </Button>
+        <Button variant="outline" size="sm" onClick={act('showSide', 'right')} title="Patient's right side (R)">
+          Right Side <kbd className="ml-auto text-xs text-muted-foreground">R</kbd>
+        </Button>
+        <Button variant="outline" size="sm" className="col-span-2" onClick={act('resetView')} title="Whole body (0)">
+          Whole Body <kbd className="ml-auto text-xs text-muted-foreground">0</kbd>
+        </Button>
+      </div>
+      <p className="text-xs leading-snug text-muted-foreground">
+        Keys: ← → turn · ↑ ↓ tilt · Shift+↑ ↓ slide (or Shift-drag) · + − zoom · F L B R sides · 0 whole body · Esc clear selection. Sides are the
+        patient’s.
+      </p>
+    </section>
   )
 }
