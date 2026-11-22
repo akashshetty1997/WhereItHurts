@@ -14,7 +14,15 @@ ALLOWED_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 # --- Visit domain (must match the frontend's src/regions.js and docs/PLAN.md) -----------------
 
 # Left and right always mean the PATIENT's side.
-REGION_IDS = ("head", "neck", "lower_back", "left_leg", "left_knee", "right_shoulder")
+REGION_IDS = (
+    "head",
+    "neck",
+    "upper_back",
+    "lower_back",
+    "left_leg",
+    "left_knee",
+    "right_shoulder",
+)
 PAIN_TYPES = ("burning", "sharp", "aching")
 SPEAKER_ROLES = ("doctor", "patient")
 MAX_SENTENCE_CHARS = 1000
@@ -31,11 +39,23 @@ EXTRACT_SOURCE_KEYWORDS = "keywords"
 
 # --- Keyword fallback ------------------------------------------------------------------------
 
-# Longest phrase first within a region; matching is whole-word and case-insensitive.
+# Matching is whole-word and case-insensitive. Across all regions the longest phrase is matched
+# first and its words are used up, so "upper back" is never also read as "back" (lower_back) and
+# "shoulder blades" is never also read as "shoulder".
 REGION_KEYWORDS: dict[str, tuple[str, ...]] = {
     "head": ("headaches", "headache", "migraine", "head"),
-    "neck": ("neck",),
-    "lower_back": ("lower back", "back"),
+    "neck": ("cervical spine", "cervical", "neck"),
+    "upper_back": (
+        "between my shoulder blades",
+        "shoulder blades",
+        "shoulder blade",
+        "thoracic spine",
+        "middle back",
+        "upper back",
+        "mid back",
+        "thoracic",
+    ),
+    "lower_back": ("lumbar spine", "lower back", "lumbar", "back"),
     "left_leg": ("left leg", "thigh", "calf", "leg"),
     "left_knee": ("left knee", "knee"),
     "right_shoulder": ("right shoulder", "shoulder"),
