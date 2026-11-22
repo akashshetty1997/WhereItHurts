@@ -44,6 +44,8 @@ class Extraction(BaseModel):
     movement: str | None = None
     # How the pain feels, when the speaker describes it ("dull ache" -> aching).
     pain_type: PainType | None = None
+    # During prep: what the patient wants to be able to do again ("put plates on the top shelf").
+    goal: str | None = None
 
 
 class ExtractResponse(Extraction):

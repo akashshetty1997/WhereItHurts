@@ -22,7 +22,7 @@ FastAPI in [backend/](backend/): `POST /api/extract` (sentence → regions, pain
 cd backend
 cp .env.example .env    # add ANTHROPIC_API_KEY (optional: keywords work without it)
 uv sync
-uv run uvicorn app.main:app --reload --port 8000 --no-access-log
+uv run uvicorn app.main:app --reload --reload-dir app --port 8000 --no-access-log
 ```
 
 Speech models for `/api/transcribe` are optional; see [backend/README.md](backend/README.md).

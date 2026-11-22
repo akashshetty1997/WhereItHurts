@@ -9,7 +9,13 @@ from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.constants import CLAUDE_CLI, ENGINE_PARAKEET, LLM_PROVIDER_CLAUDE_CODE, LLM_PROVIDERS
+from app.constants import (
+    CLAUDE_CLI,
+    ENGINE_PARAKEET,
+    LLM_PROVIDER_CLAUDE_CODE,
+    LLM_PROVIDERS,
+    MODEL_THREADS,
+)
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 
@@ -28,6 +34,9 @@ class Settings(BaseSettings):
     transcribe_enabled: bool = True
     transcribe_engine: str = ENGINE_PARAKEET
     models_dir: Path = BACKEND_DIR / "models"
+    # CPU threads for the speech models. More is slower: 4 measured fastest on a 10-core Mac
+    # (0.39 s per sentence vs 1.52 s with all 10, which fight each other).
+    model_threads: int = MODEL_THREADS
     # Where an MP4 that can't be read from a pipe goes briefly. None: the system temp folder.
     transcribe_tmp_dir: str | None = None
     # SQLite file for demo accounts and sessions (gitignored).

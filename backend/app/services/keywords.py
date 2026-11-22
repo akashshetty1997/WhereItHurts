@@ -9,6 +9,7 @@ from functools import lru_cache
 
 from app.constants import (
     FOLLOW_UP_WORDS,
+    GOAL_LEADS,
     MOVEMENT_WORDS,
     NOT_A_MENTION,
     NUMBER_WORDS,
@@ -92,6 +93,17 @@ def _pain_type(lower: str) -> str | None:
     return min(hits, key=hits.get) if hits else None
 
 
+def _goal(text: str) -> str | None:
+    """ "I want to be able to put plates on the top shelf." -> "Put plates on the top shelf"."""
+    lower = text.lower()
+    for lead in sorted(GOAL_LEADS, key=len, reverse=True):
+        if (at := lower.find(lead)) != -1:
+            rest = text[at + len(lead) :].strip(" ,.!?")
+            if rest:
+                return rest[0].upper() + rest[1:]
+    return None
+
+
 def extract_keywords(text: str) -> Extraction:
     corrected = vocabulary.correct(text)
     lower = corrected.lower()
@@ -106,4 +118,5 @@ def extract_keywords(text: str) -> Extraction:
         corrected_text=corrected if corrected != text else None,
         rating=_rating(lower),
         pain_type=_pain_type(lower),
+        goal=_goal(corrected),
     )

@@ -4,9 +4,10 @@ Audio and text stay in memory and are never logged; logs hold sizes, timings and
 """
 
 import logging
-import os
 import threading
 import time
+
+import numpy as np
 
 from app.config import Settings
 from app.constants import (
@@ -53,7 +54,7 @@ class TranscriptionService:
         from app.services.transcription.engines import ParakeetEngine, WhisperEngine
 
         started = time.monotonic()
-        threads = os.cpu_count() or 4
+        threads = settings.model_threads
         if settings.transcribe_engine == ENGINE_WHISPER:
             self._engine = WhisperEngine(WHISPER_MODEL, WHISPER_COMPUTE_TYPE)
         elif settings.transcribe_engine == ENGINE_PARAKEET:
@@ -68,6 +69,21 @@ class TranscriptionService:
         _logger.info(
             "model_loaded model=%s ms=%d", self._engine.name, (time.monotonic() - started) * 1000
         )
+
+    @property
+    def vad_model(self) -> str:
+        return str(self._settings.models_dir / VAD_MODEL_FILE)
+
+    def text_of(self, samples: np.ndarray) -> str:
+        """One short clip (16 kHz mono float32) -> its words. For live listening."""
+        with self._lock:
+            words = self._engine.words(samples, [])
+        return "".join(w.text for w in words).strip()
+
+    def voice_of(self, samples: np.ndarray) -> np.ndarray:
+        """One short clip -> a unit-length voice embedding, to tell speakers apart."""
+        with self._lock:
+            return self._diarizer.voice(samples)
 
     def transcribe(self, data: bytes, speakers: int | None, hints: list[str]) -> Transcript:
         """Raises UnreadableAudioError for audio ffmpeg can't decode."""

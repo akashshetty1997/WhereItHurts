@@ -18,7 +18,7 @@ Hackathon app (Sundai Hack 150): before a physical therapy (PT) visit the patien
 
 ```bash
 npm install && npm run dev                                                  # frontend, :5173
-cd backend && uv sync && uv run uvicorn app.main:app --reload --port 8000 --no-access-log   # backend, :8000
+cd backend && uv sync && uv run uvicorn app.main:app --reload --reload-dir app --port 8000 --no-access-log   # backend, :8000
 ```
 
 The frontend calls the backend as `fetch('/api/...')` through the Vite proxy.

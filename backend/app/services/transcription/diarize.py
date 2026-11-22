@@ -73,6 +73,10 @@ class Diarizer:
         )
         self.sample_rate = sample_rate
 
+    def voice(self, samples: np.ndarray) -> np.ndarray:
+        """Unit-length voice embedding of a whole clip (one speaker talking)."""
+        return self._embed(samples, 0.0, len(samples) / self.sample_rate)
+
     def _embed(self, samples: np.ndarray, start: float, end: float) -> np.ndarray:
         middle, half = (start + end) / 2, max((end - start) / 2, MIN_WINDOW_S / 2)
         first = max(0, int((middle - half) * self.sample_rate))
