@@ -36,7 +36,7 @@ export default function App() {
       </aside>
 
       <main className="stage">
-        <BodyScene onRegionClick={setSelected} />
+        <BodyScene onRegionClick={setSelected} mode={mode} />
         <div className="mode-tag">{mode} mode</div>
       </main>
 
