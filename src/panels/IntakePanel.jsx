@@ -1,5 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { PATIENTS } from '@/scene/patientRegions'
 import { regionLabel } from '@/regions'
 import { toTen } from '@/scene/intensity'
 import { PAIN_STYLES } from '@/lib/visitDisplay'
@@ -15,7 +17,7 @@ const COPY = {
 }
 
 // Left panel: the patient's goal and every place they marked.
-export default function IntakePanel({ visit, mode, missed, onStart, onEnd, onRestart }) {
+export default function IntakePanel({ visit, mode, missed, patient, onPatientChange, onStart, onEnd, onRestart }) {
   const copy = COPY[mode]
   const missedSet = new Set(missed.map((p) => p.region))
 
@@ -25,6 +27,29 @@ export default function IntakePanel({ visit, mode, missed, onStart, onEnd, onRes
         <h2 className="text-lg font-bold">{copy.title}</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">{copy.hint}</p>
       </div>
+
+      {mode === 'paint' && (
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm text-muted-foreground">Body</span>
+          <ToggleGroup
+            type="single"
+            value={patient}
+            onValueChange={(v) => v && onPatientChange(v)}
+            className="gap-1 rounded-lg bg-secondary p-1"
+            aria-label="Which body to show"
+          >
+            {Object.entries(PATIENTS).map(([id, p]) => (
+              <ToggleGroupItem
+                key={id}
+                value={id}
+                className="h-8 rounded-md px-3 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+              >
+                {p.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+      )}
 
       <section className="rounded-xl bg-secondary/60 p-4" aria-label="Your goal">
         <p className="text-sm text-muted-foreground">What you want to do again</p>

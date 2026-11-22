@@ -18,15 +18,16 @@ import { registerBody, emitRegionClick, glow, setListening } from './bodyApi'
 import { DEV_SEGMENTS, DEV_SEGMENT_GAP_MS } from './devSegments'
 import IntakePicker from './IntakePicker'
 import { toTen, toUnit } from './intensity'
-import { SHAPE_ORDER, regionAt, regionAnchor } from './patientRegions'
+import { PATIENTS, DEFAULT_PATIENT, SHAPE_ORDER, regionAt, regionAnchor } from './patientRegions'
 import { createPatientMaterial, patientUniforms } from '../shaders/patientMaterial'
+import { RotateCcw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import './scene.css'
 
-// A real person: Microsoft Rocketbox "Sports_Male_04" (MIT, public/models/LICENSE-rocketbox.txt),
+// A real person: Microsoft Rocketbox "Sports_Male_04" or "Sports_Female_02" (MIT, public/models/LICENSE-rocketbox.txt),
 // baked to a static A-pose mesh in meters and compressed (meshopt + WebP). Lit by a CC0 Poly
 // Haven studio HDRI (public/hdri) plus key and rim lights, with soft shadows, ambient occlusion
 // and a light bloom. The patient faces +z, so their left is +x.
-const MODEL_URL = '/models/patient.glb'
 const HDRI_URL = '/hdri/studio_small_08_1k.hdr'
 
 // Used when the visit JSON has no color for a speaker (v1 mock says "doctor", v2 says "pt").
@@ -51,6 +52,11 @@ const CAMERA_FOV = 28
 const CAMERA_HOME = new THREE.Vector3(0, 1.0, 5.2)
 const CAMERA_TARGET = new THREE.Vector3(0, 0.92, 0)
 const INTRO_SECONDS = 2.2
+// "Turn around": the camera swings half a circle around the patient.
+const TURN_SECONDS = 1.2
+// A press that moves less than this (px) and ends quickly is a tap, not a drag-to-rotate.
+const TAP_MAX_MOVE = 6
+const TAP_MAX_MS = 600
 
 // Studio backdrop: deep navy, a little lighter behind the patient.
 function makeBackground() {
@@ -121,6 +127,7 @@ function buildFloor() {
 }
 
 const easeOutCubic = (x) => 1 - Math.pow(1 - x, 3)
+const easeInOutCubic = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2)
 
 // 0..1: how strong a glow started at `start` is at time `t`.
 function glowEnvelope(t, start) {
@@ -159,7 +166,10 @@ function fakeVoiceIntake(region) {
   }, 1500)
 }
 
-export default function BodyScene({ onRegionClick, mode = 'paint' }) {
+// Remount with key={patient} to switch patients (App.jsx does).
+export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEFAULT_PATIENT }) {
+  const patientRef = useRef(patient)
+  const turnRef = useRef(null)
   const mountRef = useRef(null)
   const clickRef = useRef(onRegionClick)
   clickRef.current = onRegionClick
@@ -183,6 +193,9 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
   useEffect(() => {
     const mount = mountRef.current
     let disposed = false
+    const model = PATIENTS[patientRef.current] ?? PATIENTS[DEFAULT_PATIENT]
+    const shapes = model.shapes
+    patientUniforms.setShapes(shapes)
     const scene = new THREE.Scene()
     scene.background = makeBackground()
     const camera = new THREE.PerspectiveCamera(CAMERA_FOV, 1, 0.1, 50)
@@ -259,7 +272,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
 
     new GLTFLoader()
       .setMeshoptDecoder(MeshoptDecoder)
-      .load(MODEL_URL, (gltf) => {
+      .load(model.url, (gltf) => {
         if (disposed) return
         const maxAniso = renderer.capabilities.getMaxAnisotropy()
         patientRoot.add(gltf.scene)
@@ -268,7 +281,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
         // The optimizer split head and body into two meshes, each with its own quantization.
         gltf.scene.traverse((o) => {
           if (!o.isMesh) return
-          patientMeshes.push(o)
+          // Taps pass through hair to the skin underneath (a ponytail over the nape selects the neck).
+          if (!/hair/i.test(o.material.name)) patientMeshes.push(o)
           // The bounds that came with the quantized geometry are too small, which made raycasts
           // (taps on the shoulder) miss and could frustum-cull the body. Recompute them.
           o.geometry.computeBoundingSphere()
@@ -285,11 +299,13 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
           const el = document.createElement('div')
           el.className = 'region-label'
           const label = new CSS2DObject(el)
-          label.position.copy(regionAnchor(region))
+          label.position.copy(regionAnchor(region, shapes))
           label.visible = false
           patientRoot.add(label)
           labels.set(region, { label, el, text: '' })
         }
+        // Dev-only handle for debugging the scene from the browser console.
+        if (import.meta.env.DEV) window.__wih = { camera, renderer, patientMeshes, patientRoot }
         setLoaded(true)
       })
 
@@ -319,7 +335,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
     // Left button is reserved for tapping regions; right-drag orbits, scroll zooms.
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.target.copy(CAMERA_TARGET)
-    controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE }
+    controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE }
     controls.enablePan = false
     controls.enableDamping = true
     controls.minDistance = 2.2
@@ -343,20 +359,28 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
       raycaster.setFromCamera(pointer, camera)
       const hit = raycaster.intersectObjects(patientMeshes, false)[0]
       if (!hit) return null
-      return regionAt(patientRoot.worldToLocal(local.copy(hit.point)))
+      return regionAt(patientRoot.worldToLocal(local.copy(hit.point)), shapes)
     }
 
+    // Left-drag rotates (OrbitControls); a short press without movement is a tap on the body.
+    let press = null
     const onPointerDown = (e) => {
-      if (e.button !== 0) return
+      press = e.button === 0 ? { x: e.clientX, y: e.clientY, t: performance.now() } : null
+    }
+    const onPointerUp = (e) => {
+      if (!press || e.button !== 0) return
+      const moved = Math.hypot(e.clientX - press.x, e.clientY - press.y)
+      const quick = performance.now() - press.t < TAP_MAX_MS
+      press = null
+      if (moved > TAP_MAX_MOVE || !quick) return
       const region = regionUnder(e)
-      if (modeRef.current === 'paint') {
-        setSelected(region)
-        if (region && fakeVoice) fakeVoiceIntake(region)
-      }
+      setSelected(region)
+      if (modeRef.current === 'paint' && region && fakeVoice) fakeVoiceIntake(region)
       emitRegionClick(region)
       clickRef.current?.(region)
     }
     renderer.domElement.addEventListener('pointerdown', onPointerDown)
+    renderer.domElement.addEventListener('pointerup', onPointerUp)
 
     // Hover: the region under the pointer gets a faint outline, and the cursor shows it's tappable.
     // Raycasting runs at most once per frame.
@@ -390,12 +414,32 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
     resize()
 
     let intro = null
+    // "Turn around": swing the camera half a circle around the patient, keeping height and zoom.
+    let turn = null
+    const spherical = new THREE.Spherical()
+    turnRef.current = () => {
+      if (intro || turn) return
+      spherical.setFromVector3(camera.position.clone().sub(controls.target))
+      turn = { radius: spherical.radius, phi: spherical.phi, from: spherical.theta, progress: 0 }
+      controls.enabled = false
+    }
     renderer.setAnimationLoop(() => {
       timer.update()
       const t = timer.getElapsed()
       patientUniforms.setTime(t)
 
       // Camera intro: ease from the start angle to where the camera should rest.
+      if (turn) {
+        turn.progress = Math.min(1, turn.progress + timer.getDelta() / TURN_SECONDS)
+        const theta = turn.from + Math.PI * easeInOutCubic(turn.progress)
+        camera.position.setFromSphericalCoords(turn.radius, turn.phi, theta).add(controls.target)
+        camera.lookAt(controls.target)
+        if (turn.progress === 1) {
+          turn = null
+          controls.enabled = true
+        }
+      }
+
       if (intro) {
         intro.progress = Math.min(1, intro.progress + timer.getDelta() / INTRO_SECONDS)
         camera.position.lerpVectors(intro.from, intro.to, easeOutCubic(intro.progress))
@@ -495,6 +539,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
 
     return () => {
       disposed = true
+      turnRef.current = null
       registerBody(null)
       offSegment()
       clearInterval(devGlowTimer)
@@ -502,6 +547,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
       observer.disconnect()
       controls.dispose()
       renderer.domElement.removeEventListener('pointerdown', onPointerDown)
+      renderer.domElement.removeEventListener('pointerup', onPointerUp)
       renderer.domElement.removeEventListener('pointermove', onPointerMove)
       renderer.domElement.removeEventListener('pointerleave', onPointerLeave)
       renderer.domElement.removeEventListener('contextmenu', onContextMenu)
@@ -530,6 +576,19 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
   return (
     <div className="scene">
       <div ref={mountRef} className="scene" />
+      <div className="pointer-events-none absolute inset-x-4 top-4 flex items-start justify-between gap-3">
+        <p className="rounded-full bg-background/60 px-3 py-1 text-sm text-muted-foreground backdrop-blur">
+          Drag to turn · Click a body part to select it
+        </p>
+        <Button
+          variant="secondary"
+          size="lg"
+          className="pointer-events-auto gap-2"
+          onClick={() => turnRef.current?.()}
+        >
+          <RotateCcw /> Turn around
+        </Button>
+      </div>
       {!loaded && (
         <p className="absolute inset-x-0 top-1/2 text-center text-sm text-muted-foreground">Loading the patient…</p>
       )}

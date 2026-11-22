@@ -43,5 +43,5 @@ Controls: left-click paints/selects, right-drag rotates, scroll zooms.
 
 ## Credits
 
-- **Patient model:** "Sports_Male_04" from [Microsoft Rocketbox](https://github.com/microsoft/Microsoft-Rocketbox), MIT License (`public/models/LICENSE-rocketbox.txt`). Converted to a static glTF (A-pose baked, PBR roughness from the specular maps) and compressed with gltf-transform (meshopt + WebP): `public/models/patient.glb`, 1.4 MB.
+- **Patient models:** "Sports_Male_04" and "Sports_Female_02" (`public/models/patient-female.glb`) from [Microsoft Rocketbox](https://github.com/microsoft/Microsoft-Rocketbox), MIT License (`public/models/LICENSE-rocketbox.txt`). Converted to a static glTF (A-pose baked, PBR roughness from the specular maps) and compressed with gltf-transform (meshopt + WebP): `public/models/patient.glb`, 1.4 MB.
 - **Studio lighting:** "Studio Small 08" HDRI from [Poly Haven](https://polyhaven.com/a/studio_small_08), CC0: `public/hdri/studio_small_08_1k.hdr`.
