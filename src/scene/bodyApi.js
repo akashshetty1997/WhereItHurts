@@ -24,6 +24,12 @@ export function selectRegion(region) {
   impl?.select(region)
 }
 
+// The pain-path pulse: light travels along the regions in order (e.g. ['lower_back', 'left_leg']),
+// in the speaker's color. Fired automatically for segments that have a path.
+export function pulse(path, color) {
+  impl?.pulse(path, color)
+}
+
 // Subscribe to region clicks. The callback gets a region id, or null for a miss. Returns unsubscribe.
 export function onRegionClick(callback) {
   clickListeners.add(callback)

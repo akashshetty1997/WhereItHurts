@@ -2,7 +2,9 @@ import { useSyncExternalStore } from 'react'
 import { mockVisit } from './mockVisit'
 
 // One visit state. Painting and speech write; the 3D body and UI only read.
-let state = structuredClone(mockVisit)
+// A real visit starts empty; mockVisit only supplies the shape and the speaker colors.
+const emptyVisit = () => ({ ...structuredClone(mockVisit), painted: [], segments: [], followUps: [] })
+let state = emptyVisit()
 const listeners = new Set()
 const segmentListeners = new Set()
 
