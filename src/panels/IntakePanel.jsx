@@ -1,92 +1,104 @@
-import { Button } from '@/components/ui/button'
+import { CircleAlert, Plus } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { regionLabel } from '@/regions'
+import { REGIONS, CLINICAL_TERMS } from '@/regions'
 import { toTen } from '@/scene/intensity'
-import { PAIN_STYLES } from '@/lib/visitDisplay'
+import { PAIN_STYLES, PAIN_ICONS } from '@/lib/visitDisplay'
 import { cn } from '@/lib/utils'
+
+// Head to toe, so the list reads in the same order as the body.
+const BODY_ORDER = ['head', 'neck', 'right_shoulder', 'upper_back', 'lower_back', 'left_leg', 'left_knee']
 
 const COPY = {
   paint: {
-    title: 'Before your visit',
-    hint: 'Tap where it hurts on the body, then say what it feels like and how bad it is.',
+    title: 'Before Your Visit',
+    hint: 'Click where it hurts, on the body or in this list, then say what it feels like.',
   },
-  visit: { title: 'What you marked', hint: 'Each part lights up when someone talks about it.' },
-  ended: { title: 'What you marked', hint: 'Amber means nobody talked about it.' },
+  visit: { title: 'What You Marked', hint: 'Each part lights up when someone talks about it.' },
+  ended: { title: 'What You Marked', hint: 'Amber means nobody talked about it.' },
 }
 
-// Left panel: the patient's goal and every place they marked.
-export default function IntakePanel({ visit, mode, missed, onStart, onEnd, onRestart }) {
+// Left sidebar: the goal, then every body part as one grouped list. The list is also the
+// keyboard way to select a part (accessibility.md › Mobility: offer alternatives to gestures).
+export default function IntakePanel({ visit, mode, missed, selected, onSelectRegion }) {
   const copy = COPY[mode]
+  const painted = new Map(visit.painted.map((p) => [p.region, p]))
   const missedSet = new Set(missed.map((p) => p.region))
 
   return (
     <aside className="flex min-h-0 flex-col gap-5 border-r border-border p-5">
       <div className="space-y-1.5">
-        <h2 className="text-lg font-bold">{copy.title}</h2>
+        <h2 className="text-xl font-bold">{copy.title}</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">{copy.hint}</p>
       </div>
 
-      <section className="rounded-xl bg-secondary/60 p-4" aria-label="Your goal">
-        <p className="text-sm text-muted-foreground">What you want to do again</p>
+      <section aria-label="What you want to do again" className="space-y-1">
+        <h3 className="text-sm font-bold text-muted-foreground">Your Goal</h3>
         {visit.goal?.text ? (
-          <p className="mt-1 text-base font-bold leading-snug">{visit.goal.text}</p>
+          <p className="text-base font-bold leading-snug">{visit.goal.text}</p>
         ) : (
-          <p className="mt-1 text-sm italic text-muted-foreground">
-            Say it out loud, like “Put plates on the top shelf.”
+          <p className="text-sm leading-snug text-muted-foreground">
+            What would you like to be able to do again? Say it out loud, like “Put plates on the top shelf.”
           </p>
         )}
       </section>
 
-      <ScrollArea className="-mx-1 min-h-0 flex-1 px-1">
-        {visit.painted.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-            Nothing marked yet. Tap the body to start.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {visit.painted.map((p) => {
-              const style = PAIN_STYLES[p.type] ?? PAIN_STYLES.aching
-              const isMissed = missedSet.has(p.region)
+      <section aria-label="Body parts" className="flex min-h-0 flex-1 flex-col gap-2">
+        <h3 className="text-sm font-bold text-muted-foreground">Body Parts</h3>
+        <ScrollArea className="min-h-0 flex-1">
+          <ul className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+            {BODY_ORDER.map((region, i) => {
+              const p = painted.get(region)
+              const isMissed = missedSet.has(region)
+              const isSelected = selected === region
+              const Icon = p ? PAIN_ICONS[p.type] : null
+              const style = p ? PAIN_STYLES[p.type] : null
               return (
-                <li
-                  key={p.region}
-                  className={cn(
-                    'flex items-stretch gap-3 rounded-xl bg-card p-3 ring-1 ring-foreground/10',
-                    isMissed && 'ring-2 ring-flag',
-                  )}
-                >
-                  <span className={cn('w-1 shrink-0 rounded-full', isMissed ? 'bg-flag' : style.bar)} />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold leading-tight">{regionLabel(p.region)}</p>
-                    <p className={cn('text-sm', style.text)}>{style.label}</p>
-                    {p.note && <p className="mt-1 text-sm italic text-muted-foreground">“{p.note}”</p>}
-                  </div>
-                  <p className="self-center text-2xl font-bold tabular-nums">
-                    {toTen(p.intensity)}
-                    <span className="text-sm font-normal text-muted-foreground">/10</span>
-                  </p>
+                <li key={region} className={cn(i > 0 && 'border-t border-border')}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectRegion(region)}
+                    aria-pressed={isSelected}
+                    className={cn(
+                      'flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-secondary/60 focus-visible:bg-secondary/60 focus-visible:outline-none',
+                      isSelected && 'bg-secondary',
+                      isMissed && 'bg-flag/10',
+                    )}
+                  >
+                    <span className="grid size-7 shrink-0 place-items-center" aria-hidden>
+                      {isMissed ? (
+                        <CircleAlert className="size-5 text-flag" />
+                      ) : Icon ? (
+                        <Icon className={cn('size-5', style.text)} />
+                      ) : (
+                        <Plus className="size-4 text-muted-foreground" />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-bold leading-tight">{REGIONS[region]}</span>
+                      <span className="block text-sm text-muted-foreground">
+                        {p ? (
+                          <>
+                            <span className={style.text}>{style.label}</span>
+                            {isMissed && <span className="text-flag"> · Not discussed</span>}
+                          </>
+                        ) : (
+                          `${CLINICAL_TERMS[region] ? `${CLINICAL_TERMS[region]} · ` : ''}Not marked`
+                        )}
+                      </span>
+                    </span>
+                    {p && (
+                      <span className="text-2xl font-bold tabular-nums">
+                        {toTen(p.intensity)}
+                        <span className="text-sm font-normal text-muted-foreground">/10</span>
+                      </span>
+                    )}
+                  </button>
                 </li>
               )
             })}
           </ul>
-        )}
-      </ScrollArea>
-
-      {mode === 'paint' && (
-        <Button size="lg" className="h-11 text-base font-bold" onClick={onStart}>
-          Start visit
-        </Button>
-      )}
-      {mode === 'visit' && (
-        <Button size="lg" variant="secondary" className="h-11 text-base font-bold" onClick={onEnd}>
-          End visit
-        </Button>
-      )}
-      {mode === 'ended' && (
-        <Button size="lg" variant="outline" className="h-11 text-base" onClick={onRestart}>
-          Back to marking
-        </Button>
-      )}
+        </ScrollArea>
+      </section>
     </aside>
   )
 }

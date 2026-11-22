@@ -308,6 +308,11 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
         if (region) setSelected(region)
         setListeningState(region)
       },
+      select(region) {
+        setSelected(region)
+        emitRegionClick(region)
+        clickRef.current?.(region)
+      },
     })
 
     // Integration: every new segment lights its regions in the speaker's color.
@@ -349,10 +354,9 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
     const onPointerDown = (e) => {
       if (e.button !== 0) return
       const region = regionUnder(e)
-      if (modeRef.current === 'paint') {
-        setSelected(region)
-        if (region && fakeVoice) fakeVoiceIntake(region)
-      }
+      // Selected in every mode (ring on the body); the pain card only opens during intake.
+      setSelected(region)
+      if (modeRef.current === 'paint' && region && fakeVoice) fakeVoiceIntake(region)
       emitRegionClick(region)
       clickRef.current?.(region)
     }
@@ -390,10 +394,12 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
     resize()
 
     let intro = null
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     renderer.setAnimationLoop(() => {
       timer.update()
       const t = timer.getElapsed()
-      patientUniforms.setTime(t)
+      // Reduce Motion: the pain looks slow down (sharp sparks re-seed ~1/s instead of ~7/s).
+      patientUniforms.setTime(reduceMotion ? t * 0.15 : t)
 
       // Camera intro: ease from the start angle to where the camera should rest.
       if (intro) {

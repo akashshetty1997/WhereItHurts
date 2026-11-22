@@ -18,6 +18,12 @@ export function setListening(region) {
   impl?.setListening(region)
 }
 
+// Select a region from outside the 3D view (the body-part list, keyboard users). The body shows
+// the selection ring and, during intake, the pain card; region clicks fire as if it was tapped.
+export function selectRegion(region) {
+  impl?.select(region)
+}
+
 // Subscribe to region clicks. The callback gets a region id, or null for a miss. Returns unsubscribe.
 export function onRegionClick(callback) {
   clickListeners.add(callback)

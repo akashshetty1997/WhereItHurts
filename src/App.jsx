@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import BodyScene from './scene/BodyScene'
+import { selectRegion } from './scene/bodyApi'
 import AppHeader from './panels/AppHeader'
 import IntakePanel from './panels/IntakePanel'
 import ConversationPanel from './panels/ConversationPanel'
 import { useVisit, unmentioned } from './visitStore'
+
+const NEXT_MODE = { paint: 'visit', visit: 'ended', ended: 'paint' }
 
 export default function App() {
   const visit = useVisit()
@@ -13,16 +16,10 @@ export default function App() {
 
   return (
     <div className="grid h-dvh grid-rows-[auto_1fr] bg-background">
-      <AppHeader mode={mode} />
-      <div className="grid min-h-0 grid-cols-[300px_1fr_340px]">
-        <IntakePanel
-          visit={visit}
-          mode={mode}
-          missed={missed}
-          onStart={() => setMode('visit')}
-          onEnd={() => setMode('ended')}
-          onRestart={() => setMode('paint')}
-        />
+      <AppHeader mode={mode} onAction={() => setMode(NEXT_MODE[mode])} />
+      <div className="grid min-h-0 grid-cols-[320px_1fr_360px]">
+        {/* The list and the body share one selection: picking either one selects both. */}
+        <IntakePanel visit={visit} mode={mode} missed={missed} selected={selected} onSelectRegion={selectRegion} />
         <main className="relative min-h-0 bg-navy-deep">
           <BodyScene onRegionClick={setSelected} mode={mode} />
         </main>

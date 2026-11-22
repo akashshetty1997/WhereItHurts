@@ -1,3 +1,5 @@
+import { Flame, Zap, Waves } from 'lucide-react'
+
 // How visit data is shown: speaker names and pain-type colors.
 // Full class strings (not built at runtime) so Tailwind can find them.
 
@@ -10,3 +12,6 @@ export const PAIN_STYLES = {
   sharp: { bar: 'bg-sharp', text: 'text-sharp', ring: 'data-[state=on]:ring-sharp', label: 'Sharp' },
   aching: { bar: 'bg-aching', text: 'text-aching', ring: 'data-[state=on]:ring-aching', label: 'Aching' },
 }
+
+// A shape per pain type, so the type never depends on color alone (accessibility.md › Vision).
+export const PAIN_ICONS = { burning: Flame, sharp: Zap, aching: Waves }
