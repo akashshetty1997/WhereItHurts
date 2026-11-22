@@ -24,6 +24,7 @@ import { createAnatomy } from './anatomy'
 import { createMovementSim } from './movementSim'
 import { MOVEMENTS } from './movements'
 import MovementPanel from './MovementPanel'
+import { faceTexture, loadSavedPhoto } from './facePhoto'
 import AnatomyOverlay from './AnatomyOverlay'
 import { createPatientMaterial, patientUniforms } from '../shaders/patientMaterial'
 import {
@@ -498,6 +499,10 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
           labels.set(region, { label, el, text: '' })
         }
         setLoaded(true)
+        // A face photo kept from earlier (Use My Photo) goes back on.
+        loadSavedPhoto()
+          .then((photo) => photo && !disposed && setFace(photo))
+          .catch((error) => console.warn('Saved face photo not applied:', error))
       })
 
     // THREE.Timer replaces the deprecated Clock; connect() avoids a huge jump after a tab switch.
@@ -563,6 +568,18 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       openMovement: (region) => openAnatomy(region, { sim: true }),
       playMovement: (region, label, direction) => playMovement(region, label, direction),
       preloadAnatomy: () => anatomy.preload(),
+      // Use My Photo: a canvas with a face, or null for the model's own face. Ends on a close-up.
+      async setFacePhoto(photo) {
+        if (anatomyRegion) closeAnatomy()
+        await setFace(photo)
+        // Reveal: a straight-on close-up of the face.
+        const head = headMesh()
+        if (!disposed && head) {
+          const box = new THREE.Box3().setFromObject(head)
+          const face = new THREE.Vector3((box.min.x + box.max.x) / 2, box.max.y - (box.max.y - box.min.y) * 0.4, 0)
+          moveTo({ target: face, radius: 1.05, phi: 1.5, theta: 0 }, 1.4)
+        }
+      },
       anatomyLayer: (layer, visible) => setAnatomyLayer(layer, visible),
       select(region) {
         setSelected(region)
@@ -573,10 +590,67 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       },
     })
 
+    // Use My Photo (src/scene/facePhoto.js). The head mesh is the one whose material is the head's.
+    const headMesh = () => patientMeshes.find((m) => /head/i.test([m.material].flat()[0]?.name ?? ''))
+    // A straight-on render of the face (the person's view is restored in the same tick), and a way
+    // to find the head texture's UV under any point of it.
+    function captureFace(head) {
+      const box = new THREE.Box3().setFromObject(head)
+      const size = box.getSize(new THREE.Vector3())
+      // The head mesh runs from the collar to the crown; the face sits in its upper part.
+      const aim = new THREE.Vector3((box.min.x + box.max.x) / 2, box.max.y - size.y * 0.4, (box.min.z + box.max.z) / 2)
+      const shotCamera = camera.clone()
+      const distance = (size.y * 0.42) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
+      shotCamera.position.set(aim.x, aim.y, aim.z + distance)
+      shotCamera.lookAt(aim)
+      shotCamera.updateMatrixWorld()
+      const saved = { position: camera.position.clone(), quaternion: camera.quaternion.clone(), bloom: bloom.enabled, vignette: vignette.enabled }
+      camera.position.copy(shotCamera.position)
+      camera.quaternion.copy(shotCamera.quaternion)
+      bloom.enabled = false
+      vignette.enabled = false
+      composer.render()
+      const image = document.createElement('canvas')
+      image.width = renderer.domElement.width
+      image.height = renderer.domElement.height
+      image.getContext('2d').drawImage(renderer.domElement, 0, 0)
+      camera.position.copy(saved.position)
+      camera.quaternion.copy(saved.quaternion)
+      bloom.enabled = saved.bloom
+      vignette.enabled = saved.vignette
+      composer.render()
+      const faceRay = new THREE.Raycaster()
+      const at = new THREE.Vector2()
+      return {
+        image,
+        uvAt(x, y) {
+          at.set(x * 2 - 1, 1 - y * 2)
+          faceRay.setFromCamera(at, shotCamera)
+          return faceRay.intersectObject(head, false)[0]?.uv?.clone() ?? null
+        },
+      }
+    }
+    let faceRequest = 0
+    async function setFace(photo) {
+      const head = headMesh()
+      if (!head) throw new Error('The patient hasn’t loaded yet.')
+      const material = [head.material].flat()[0]
+      material.userData.originalMap ??= material.map
+      const original = material.userData.originalMap
+      const request = ++faceRequest
+      let next = original
+      if (photo) {
+        next = await faceTexture(photo, original, captureFace(head))
+        if (disposed || request !== faceRequest) return next.dispose()
+      }
+      if (material.map !== original) material.map.dispose()
+      material.map = next
+    }
+
     // Show Anatomy: the skin around the region fades to see-through (the shader's x-ray sphere),
     // the reference anatomy appears inside, and ambient occlusion is turned off so it isn't
     // shaded by the skin it's seen through. Closing fades back, then removes it.
-    const xray = { level: 0, goal: 0, a: new THREE.Vector3(), b: new THREE.Vector3(), radius: 0.28, showMark: true }
+    const xray = { level: 0, goal: 0, a: new THREE.Vector3(), b: new THREE.Vector3(), radius: 0.28, showMark: true, skin: 1, skinGoal: 1 }
     let anatomyRequest = 0
     let anatomyRegion = null // open (or opening)
     const setSkinSeeThrough = (on) => {
@@ -600,6 +674,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       anatomyRegion = region
       setAnatomyOpen({ region, ready: false, sim, label })
       setStructure(null)
+      // Clear the stage for the anatomy (not saved: the Controls button brings the panel back).
+      setShowControlsState(false)
       let ok = false
       try {
         ok = await anatomy.show(region)
@@ -627,13 +703,15 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         xray.a.copy(ghost.a)
         xray.b.copy(ghost.b)
         xray.radius = ghost.r
-        xray.goal = 1.6
+        xray.goal = 1
+        xray.skinGoal = 0.5 // a faint ghost outline (the rim), so the moving bones read clearly
       } else {
         // See-through around the anchor, or along a limb (fit.xray: { a, b, r }).
         xray.a.copy(fit.xray?.a ?? fit.target)
         xray.b.copy(fit.xray?.b ?? fit.target)
         xray.radius = fit.xray?.r ?? 0.28
         xray.goal = 1
+        xray.skinGoal = 1
       }
       setSkinSeeThrough(true)
       gtao.blendIntensity = 0
@@ -643,7 +721,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         const view = movement.camera(entry)
         moveTo({ target: patientRoot.localToWorld(view.at), radius: view.radius, phi: view.phi, theta: view.theta })
       } else {
-        focusRegion(region)
+        focusRegion(region, fit.viewTheta)
       }
     }
     // Voice: the PT asked for a movement ("raise your arm", "turn your head to the left"). Open its
@@ -672,6 +750,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       anatomyRegion = null
       anatomy.hide()
       xray.goal = 0
+      xray.skinGoal = 1
+      xray.showMark = true
       anatomy.highlight(null)
       setAnatomyOpen(null)
       setStructure(null)
@@ -681,7 +761,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
     }
     function setAnatomyLayer(layer, visible) {
       if (layer === 'mark') xray.showMark = visible
-      else if (layer === 'skin') xray.goal = visible ? 1 : 1.6 // past 1 = skin fully gone around the region
+      else if (layer === 'skin') xray.skinGoal = visible ? 1 : 0 // 1 = see-through ghost, 0 = gone around the region
       else anatomy.setLayer(layer, visible)
     }
     const structureUnder = (e) => {
@@ -690,7 +770,19 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       const rect = renderer.domElement.getBoundingClientRect()
       pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1)
       raycaster.setFromCamera(pointer, camera)
-      return raycaster.intersectObjects(meshes, false)[0]?.object ?? null
+      // Joints first: they're drawn on top and sit inside the bones. A little slack (about 14 px)
+      // makes the small markers easy to hit.
+      let joint = null
+      let best = 14 // pixels
+      for (const m of anatomy.markers()) {
+        const p = m.getWorldPosition(new THREE.Vector3()).project(camera)
+        const d = Math.hypot(((p.x - pointer.x) * rect.width) / 2, ((p.y - pointer.y) * rect.height) / 2)
+        if (p.z < 1 && d < best) {
+          best = d
+          joint = m
+        }
+      }
+      return joint ?? raycaster.intersectObjects(meshes, false)[0]?.object ?? null
     }
 
     // Integration: every new segment lights its regions in the speaker's color.
@@ -915,7 +1007,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
     }
     // Close-up: aim at the middle of the region's shape, from its side, near enough to fill the view.
     const mid = new THREE.Vector3()
-    function focusRegion(region) {
+    // theta: optional view angle (Show Anatomy picks the side its structures are on).
+    function focusRegion(region, theta) {
       const shape = shapes[region]
       if (!shape) return
       mid.copy(shape.a).add(shape.b).multiplyScalar(0.5)
@@ -924,7 +1017,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         target: patientRoot.localToWorld(mid.clone()),
         radius: 1.0 + shape.r * 3 + length * 0.7,
         phi: CLOSE_UP_PHI,
-        theta: CLOSE_UP_THETA[region] ?? 0,
+        theta: theta ?? CLOSE_UP_THETA[region] ?? 0,
       })
     }
     viewRef.current = { zoom, resetView, turnAround, focusRegion, turn, tilt, slide, showSide }
@@ -969,8 +1062,12 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       }
 
       // Show Anatomy fade (about 0.6 s each way).
+      const xrayStep = timer.getDelta() / (reduceMotion ? 0.001 : 0.6)
+      if (xray.skin !== xray.skinGoal) {
+        xray.skin = xray.skinGoal > xray.skin ? Math.min(xray.skinGoal, xray.skin + xrayStep) : Math.max(xray.skinGoal, xray.skin - xrayStep)
+      }
       if (xray.level !== xray.goal) {
-        const step = timer.getDelta() / (reduceMotion ? 0.001 : 0.6)
+        const step = xrayStep
         xray.level = xray.goal > xray.level ? Math.min(xray.goal, xray.level + step) : Math.max(xray.goal, xray.level - step)
         if (xray.level === 0 && !anatomyRegion) {
           setSkinSeeThrough(false)
@@ -978,7 +1075,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
           bloom.enabled = true
         }
       }
-      patientUniforms.setXray(xray.a, xray.b, xray.radius, xray.level, xray.showMark)
+      patientUniforms.setXray(xray.a, xray.b, xray.radius, xray.level, xray.showMark, xray.skin)
+      anatomy.update(t)
 
       // Reach Up: move the arm, and pulse the shoulder while it's inside the band where it hurts.
       if (simActive && simActive.update(timer.getDelta()) && t - lastBandGlow > 1.2) {
@@ -1170,9 +1268,14 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       <div ref={mountRef} className="scene" />
       {/* View controls: a floating functional layer over the 3D content. */}
       <div className="pointer-events-none absolute inset-x-4 top-4 flex items-start justify-between gap-3">
-        <p className="rounded-full bg-card/85 px-3 py-1.5 text-sm text-muted-foreground ring-1 ring-border backdrop-blur">
-          Drag to turn · Shift-drag to slide up or down · Double-click a part to zoom in
-        </p>
+        {/* Show Anatomy puts its own panel in this corner. */}
+        {anatomyOpen ? (
+          <span />
+        ) : (
+          <p className="rounded-full bg-card/85 px-3 py-1.5 text-sm text-muted-foreground ring-1 ring-border backdrop-blur">
+            Drag to turn · Shift-drag to slide up or down · Double-click a part to zoom in
+          </p>
+        )}
         <div className="pointer-events-auto flex flex-col items-end gap-2">
           <div className="flex gap-1 rounded-xl bg-card/85 p-1 ring-1 ring-border backdrop-blur">
             <ViewButton label="Zoom Out (−)" onClick={() => viewRef.current?.zoom(ZOOM_STEP)} icon={ZoomOut} iconOnly />

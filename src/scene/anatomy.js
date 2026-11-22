@@ -23,6 +23,31 @@ export const KIND_STYLES = {
 }
 const HOVER = new THREE.Color('#ffffff')
 
+// Joints (AC joint, shoulder joint, knee…) are points in the GLB, not meshes. Each gets a small
+// glowing marker drawn on top of the bones, so the PT can see and pick it like any structure.
+const JOINT_RADIUS = 0.0085 // meters, before the region's scale
+const jointCore = new THREE.SphereGeometry(JOINT_RADIUS, 20, 14)
+const jointHalo = new THREE.SphereGeometry(JOINT_RADIUS * 1.8, 20, 14)
+function jointMarker(node) {
+  const color = new THREE.Color(KIND_STYLES.joint.color)
+  const core = new THREE.Mesh(
+    jointCore,
+    new THREE.MeshBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.95, toneMapped: false }),
+  )
+  const halo = new THREE.Mesh(
+    jointHalo,
+    new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false, transparent: true, opacity: 0.22, toneMapped: false }),
+  )
+  halo.raycast = () => {} // picks go through the core (see markers() for the wider hit area)
+  core.add(halo)
+  core.position.copy(node.position)
+  core.renderOrder = 10
+  halo.renderOrder = 10
+  core.userData = { ...node.userData, kind: 'joint' }
+  core.name = `joint:${node.userData.joint}`
+  return core
+}
+
 let loading = null
 function loadGltf() {
   loading ??= new GLTFLoader()
@@ -58,7 +83,7 @@ export function createAnatomy(parent, fits) {
   root.visible = false
   parent.add(root)
 
-  const regions = new Map() // region -> { group, meshes, joints, fit }
+  const regions = new Map() // region -> { group, meshes, markers, joints, fit }
   let ready = null
   let current = null
   let highlighted = null
@@ -73,6 +98,7 @@ export function createAnatomy(parent, fits) {
       if (!region || !fit) continue
       const meshes = []
       const joints = {}
+      const markers = []
       group.traverse((o) => {
         if (o.isMesh) {
           o.material = materialFor(o.userData.kind)
@@ -98,6 +124,13 @@ export function createAnatomy(parent, fits) {
       placed.add(group)
       // The movement simulation's rig (Reach Up, Turn Head, Bend Knee), if this region has one.
       const rig = buildRig(region, group, meshes, joints, fit)
+      // Joint markers, in the same frame as the bones they sit between (each joint is a pivot, so
+      // it stays put when the rig moves a bone).
+      for (const node of Object.values(joints)) {
+        const marker = jointMarker(node)
+        group.add(marker)
+        markers.push(marker)
+      }
       placed.visible = false
       root.add(placed)
       // Labels and the see-through sphere use the joints' positions in body space.
@@ -105,7 +138,7 @@ export function createAnatomy(parent, fits) {
       const jointsBody = Object.fromEntries(
         Object.entries(joints).map(([id, o]) => [id, { ...o.userData, position: o.position.clone().applyMatrix4(placed.matrix) }]),
       )
-      regions.set(region, { group: placed, regionGroup: group, meshes, joints: jointsBody, fit, rig })
+      regions.set(region, { group: placed, regionGroup: group, meshes, markers, joints: jointsBody, fit, rig })
     }
   }
 
@@ -143,6 +176,18 @@ export function createAnatomy(parent, fits) {
     region: () => regions.get(current) ?? null,
     // Meshes to raycast while open.
     meshes: () => regions.get(current)?.meshes.filter((m) => m.visible) ?? [],
+    // Joint markers: picked before bones and muscles, since they sit inside them.
+    markers: () => regions.get(current)?.markers ?? [],
+    // Per frame: the joint markers breathe gently so they read as something to tap.
+    update(t) {
+      const entry = regions.get(current)
+      if (!entry) return
+      const s = 1 + 0.12 * Math.sin(t * 3.2)
+      for (const m of entry.markers) {
+        const k = m === highlighted ? 1.6 : 1
+        m.scale.setScalar(s * k)
+      }
+    },
     // Show or hide a layer: 'bone' | 'muscle' (ligaments and discs go with muscles).
     setLayer(kind, visible) {
       regions.forEach((r) =>
@@ -153,9 +198,9 @@ export function createAnatomy(parent, fits) {
       )
     },
     highlight(mesh, level = 0.28) {
-      if (highlighted && highlighted !== mesh) highlighted.material.emissiveIntensity = 0
+      if (highlighted && highlighted !== mesh && 'emissiveIntensity' in highlighted.material) highlighted.material.emissiveIntensity = 0
       highlighted = mesh
-      if (mesh) mesh.material.emissiveIntensity = level
+      if (mesh && 'emissiveIntensity' in mesh.material) mesh.material.emissiveIntensity = level
     },
   }
 }

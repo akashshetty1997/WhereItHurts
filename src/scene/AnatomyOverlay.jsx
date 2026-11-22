@@ -2,20 +2,23 @@
 // layer toggles with a legend, and the card for the structure the PT picked, with Explain to
 // Patient (large text on the shared screen) and Add to Report.
 import { useState } from 'react'
-import { ArrowLeft, Check, MessageSquareText, NotebookPen, X } from 'lucide-react'
+import { ArrowLeft, Check, Circle, MessageSquareText, NotebookPen, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { REGIONS } from '../regions'
 import { visitStore, useVisit } from '../visitStore'
 import { KIND_STYLES } from './anatomy'
+import { PAIN_STYLES } from '@/lib/visitDisplay'
+import { toTen } from './intensity'
 
 const CREDIT = 'Anatomy: BodyParts3D, © The Database Center for Life Science, CC BY 4.0'
 
+const SKIN_SWATCH = '#d9a483'
 const LAYERS = [
-  { id: 'skin', label: 'Skin' },
-  { id: 'muscle', label: 'Muscles', swatch: KIND_STYLES.muscle.color },
-  { id: 'bone', label: 'Bones', swatch: KIND_STYLES.bone.color },
-  { id: 'mark', label: 'Pain Mark' },
+  { id: 'skin', label: 'Skin', swatch: SKIN_SWATCH, on: 'See-through', off: 'Hidden' },
+  { id: 'muscle', label: 'Muscles', swatch: KIND_STYLES.muscle.color, on: 'Shown', off: 'Hidden' },
+  { id: 'bone', label: 'Bones', swatch: KIND_STYLES.bone.color, on: 'Shown', off: 'Hidden' },
+  { id: 'mark', label: 'Pain Mark', on: 'Shown', off: 'Hidden' },
 ]
 
 const PURPOSES = [
@@ -31,7 +34,7 @@ export default function AnatomyOverlay({ region, ready, structure, hoverLabel, l
     <>
       <section
         aria-label="3D reference anatomy"
-        className="absolute left-4 top-16 w-80 space-y-3 rounded-2xl bg-card/95 p-4 shadow-2xl ring-1 ring-foreground/10 backdrop-blur animate-in fade-in"
+        className="absolute left-4 top-4 w-80 space-y-3 rounded-2xl bg-card/95 p-4 shadow-2xl ring-1 ring-foreground/10 backdrop-blur animate-in fade-in"
         onPointerDown={stop}
       >
         <div>
@@ -42,27 +45,9 @@ export default function AnatomyOverlay({ region, ready, structure, hoverLabel, l
           <ArrowLeft className="size-4" aria-hidden />
           Back to Skin <kbd className="ml-auto text-xs text-muted-foreground">Esc</kbd>
         </Button>
-        <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="Layers">
-          {LAYERS.map((layer) => (
-            <Button
-              key={layer.id}
-              variant="ghost"
-              size="sm"
-              aria-pressed={layers[layer.id]}
-              onClick={() => onLayer(layer.id, !layers[layer.id])}
-              className="justify-start gap-2 ring-1 ring-border aria-pressed:bg-secondary aria-[pressed=false]:text-muted-foreground"
-            >
-              <span
-                className={cn('size-3 rounded-full ring-1 ring-foreground/20', !layer.swatch && 'bg-transparent')}
-                style={layer.swatch ? { background: layer.swatch } : undefined}
-                aria-hidden
-              />
-              {layer.label}
-            </Button>
-          ))}
-        </div>
+        <LayerToggles region={region} layers={layers} onLayer={onLayer} />
         <p className="text-sm text-muted-foreground" aria-live="polite">
-          {!ready ? 'Loading the anatomy…' : hoverLabel ? hoverLabel : 'Click a bone or muscle to learn about it.'}
+          {!ready ? 'Loading the anatomy…' : hoverLabel ? hoverLabel : 'Click a bone, a muscle or a teal joint dot to learn about it.'}
         </p>
       </section>
 
@@ -99,13 +84,66 @@ export default function AnatomyOverlay({ region, ready, structure, hoverLabel, l
   )
 }
 
+// Layer switches: on is a filled pill with a check, off an outlined, dimmed pill with an empty
+// circle, and the state is also written out ("See-through", "Hidden"), so it never depends on color.
+function LayerToggles({ region, layers, onLayer }) {
+  const visit = useVisit()
+  const mark = visit.painted.find((p) => p.region === region)
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="Layers">
+        {LAYERS.map((layer) => {
+          const noMark = layer.id === 'mark' && !mark
+          const on = layers[layer.id] && !noMark
+          const swatch = layer.id === 'mark' ? mark && `var(--${mark.type})` : layer.swatch
+          return (
+            <button
+              key={layer.id}
+              type="button"
+              aria-pressed={on}
+              disabled={noMark}
+              onClick={() => onLayer(layer.id, !layers[layer.id])}
+              className={cn(
+                'flex h-12 items-center gap-2 rounded-xl px-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                on
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground ring-1 ring-border ring-inset hover:bg-secondary/60',
+                noMark && 'cursor-not-allowed opacity-60 hover:bg-transparent',
+              )}
+            >
+              {on ? <Check className="size-4 shrink-0" aria-hidden /> : <Circle className="size-4 shrink-0" aria-hidden />}
+              <span className="min-w-0 flex-1 leading-tight">
+                <span className="block text-sm font-bold">{layer.label}</span>
+                <span className={cn('block text-xs', on ? 'opacity-80' : '')}>
+                  {noMark ? 'Not marked here' : on ? layer.on : layer.off}
+                </span>
+              </span>
+              {swatch && (
+                <span className="size-3.5 shrink-0 rounded-full ring-1 ring-black/20" style={{ background: swatch }} aria-hidden />
+              )}
+            </button>
+          )
+        })}
+      </div>
+      {mark && (
+        <p className="text-sm text-muted-foreground">
+          Patient’s mark: <span className={PAIN_STYLES[mark.type]?.text}>{PAIN_STYLES[mark.type]?.label}</span>,{' '}
+          {toTen(mark.intensity)}/10
+        </p>
+      )}
+    </div>
+  )
+}
+
 function StructureCard({ region, structure, onExplain, onClose }) {
   const visit = useVisit()
   const [adding, setAdding] = useState(false)
   const [purpose, setPurpose] = useState('discussed')
   const [note, setNote] = useState('')
+  // Bones and muscles have an FMA id; joints (points between bones) have a joint id instead.
+  const idOf = (s) => s.fma ?? s.joint
   const saved = (visit.anatomyNotes ?? []).filter(
-    (n) => n.complaintRegion === region && n.structure.fma === structure.fma,
+    (n) => n.complaintRegion === region && idOf(n.structure) === idOf(structure),
   )
 
   function add(e) {
@@ -114,6 +152,7 @@ function StructureCard({ region, structure, onExplain, onClose }) {
       complaintRegion: region,
       structure: {
         fma: structure.fma,
+        joint: structure.joint,
         label: structure.label,
         anatomical: structure.anatomical,
         region: structure.region,

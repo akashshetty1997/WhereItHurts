@@ -14,6 +14,7 @@ const v = (x, y, z) => new THREE.Vector3(x, y, z)
 // Reach Up (src/scene/movements.js) raises it from there.
 const ARM_BONE = ['FMA23130'] // humerus
 const ARM_MUSCLES = ['FMA34680', 'FMA34682', 'FMA34684'] // deltoid parts
+const HEAD_VIEW = -Math.PI * 0.72 // camera angle around the body: behind, on the patient's right
 
 export const PATIENTS = {
   male: {
@@ -50,7 +51,9 @@ export const PATIENTS = {
         scale: 1.065,
         xray: { a: v(0.1, 0.95, -0.01), b: v(0.1, 0.12, 0.0), r: 0.17 }, // the whole leg
       },
-      head: { anchor: 'jaw_joint', target: v(0.038, 1.66, 0.03), scale: 1.065 },
+      // viewTheta: open from behind and to the right, where the base-of-skull muscles are (from the
+      // front they'd show through the see-through face, as if in the mouth).
+      head: { anchor: 'jaw_joint', target: v(0.038, 1.66, 0.03), scale: 1.065, viewTheta: HEAD_VIEW },
     },
   },
   female: {
@@ -83,7 +86,7 @@ export const PATIENTS = {
         scale: 1.024,
         xray: { a: v(0.1, 0.9, -0.04), b: v(0.1, 0.12, -0.03), r: 0.17 },
       },
-      head: { anchor: 'jaw_joint', target: v(0.037, 1.596, -0.029), scale: 1.024 },
+      head: { anchor: 'jaw_joint', target: v(0.037, 1.596, -0.029), scale: 1.024, viewTheta: HEAD_VIEW },
     },
   },
 }
