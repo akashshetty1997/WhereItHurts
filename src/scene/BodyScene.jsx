@@ -2,19 +2,31 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { visitStore, useVisit } from '../visitStore'
 import { regionLabel } from '../regions'
 import { registerBody, emitRegionClick, glow, setListening } from './bodyApi'
 import { DEV_SEGMENTS, DEV_SEGMENT_GAP_MS } from './devSegments'
 import IntakePicker from './IntakePicker'
 import { toTen, toUnit } from './intensity'
-import { createPainMaterial, setPain, setGlow, setPainTime } from '../shaders/painMaterial'
+import { createPainMaterial, setPain, setGlow, setPainTime, setRim } from '../shaders/painMaterial'
 import './scene.css'
 
 // Placeholder body: capsules and boxes (PLAN fallback) until a GLB is ready.
 // The body faces +z (toward the camera), so the PATIENT's left is +x.
-const SKIN = '#cfd8dc'
-const BONE = '#f5f1e6'
+// Hologram look: dark glassy navy body, pale blue spine, cyan rim (src/shaders/painMaterial.js).
+const SKIN = '#1c3554'
+const BONE = '#cfeaff'
+const HOLO = '#7fd6ff'
+const FLOOR_Y = -2.0
+// Rim strength: normal, hovered, selected.
+const RIM_IDLE = 0.9
+const RIM_HOVER = 2.0
+const RIM_SELECTED = 1.6
+// Camera intro: eases from a high side angle to the front view.
+const INTRO_SECONDS = 1.8
+const CAMERA_HOME = new THREE.Vector3(0, 0.2, 7)
 // Used when the visit JSON has no color for a speaker (v1 mock says "doctor", v2 says "pt").
 const SPEAKER_COLORS = { pt: '#4FC3F7', doctor: '#4FC3F7', patient: '#FFB74D' }
 
@@ -82,6 +94,68 @@ function buildSpine() {
   )
 }
 
+// Navy backdrop: a soft radial gradient, brighter behind the body.
+function makeBackground() {
+  const size = 512
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  const ctx = canvas.getContext('2d')
+  const g = ctx.createRadialGradient(size / 2, size * 0.42, 0, size / 2, size / 2, size * 0.72)
+  g.addColorStop(0, '#163055')
+  g.addColorStop(0.55, '#0b1a31')
+  g.addColorStop(1, '#050c18')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, size, size)
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
+
+// The platform the body stands on: a soft contact shadow and two glowing rings.
+function buildStage() {
+  const stage = new THREE.Group()
+  const size = 128
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  const ctx = canvas.getContext('2d')
+  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
+  g.addColorStop(0, 'rgba(0,0,0,0.7)')
+  g.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, size, size)
+  const shadowMap = new THREE.CanvasTexture(canvas)
+  shadowMap.colorSpace = THREE.SRGBColorSpace
+  const shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.6, 1.6),
+    new THREE.MeshBasicMaterial({ map: shadowMap, transparent: true, depthWrite: false }),
+  )
+  shadow.rotation.x = -Math.PI / 2
+  shadow.position.y = FLOOR_Y + 0.001
+  stage.add(shadow)
+
+  const ringMaterial = (opacity) =>
+    new THREE.MeshBasicMaterial({
+      color: HOLO,
+      transparent: true,
+      opacity,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    })
+  const inner = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.66, 96), ringMaterial(0.5))
+  const outer = new THREE.Mesh(new THREE.RingGeometry(0.95, 0.965, 96), ringMaterial(0.22))
+  for (const ring of [inner, outer]) {
+    ring.rotation.x = -Math.PI / 2
+    ring.position.y = FLOOR_Y + 0.002
+    ring.raycast = () => {}
+    stage.add(ring)
+  }
+  stage.userData.rings = [inner, outer]
+  return stage
+}
+
+const easeOutCubic = (x) => 1 - Math.pow(1 - x, 3)
+
 // 0..1: how strong a glow started at `start` is at time `t`.
 function glowEnvelope(t, start) {
   const age = t - start
@@ -143,12 +217,21 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
   useEffect(() => {
     const mount = mountRef.current
     const scene = new THREE.Scene()
+    scene.background = makeBackground()
     const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100)
-    camera.position.set(0, 0.2, 7)
+    camera.position.copy(CAMERA_HOME)
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true })
+    // HDR output buffer so bloom can run as a built-in renderer effect (no composer);
+    // tone mapping and color space are applied once, after the effects.
+    const renderer = new THREE.WebGLRenderer({ antialias: true, outputBufferType: THREE.HalfFloatType })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    // Neutral tone mapping keeps the pain colors' hue (ACES washed burning out to peach).
+    renderer.toneMapping = THREE.NeutralToneMapping
+    renderer.toneMappingExposure = 1.0
     mount.appendChild(renderer.domElement)
+    // Bloom picks up what is brighter than the threshold: pain looks, speech glow, rims, rings.
+    const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.75, 0.5, 0.62)
+    renderer.setEffects([bloom])
 
     // HTML labels pinned to regions; they never take clicks.
     const labelRenderer = new CSS2DRenderer()
@@ -157,10 +240,24 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
     labelRenderer.domElement.style.pointerEvents = 'none'
     mount.appendChild(labelRenderer.domElement)
 
-    scene.add(new THREE.HemisphereLight('#ffffff', '#334', 1.2))
-    const key = new THREE.DirectionalLight('#ffffff', 1.5)
+    // Lighting: a soft room environment for reflections, a cool key light from the front and a
+    // cyan back light that outlines the body against the navy.
+    const pmrem = new THREE.PMREMGenerator(renderer)
+    const room = new RoomEnvironment()
+    const envMap = pmrem.fromScene(room, 0.04).texture
+    scene.environment = envMap
+    scene.environmentIntensity = 0.35
+    room.dispose()
+    pmrem.dispose()
+    scene.add(new THREE.HemisphereLight('#bfe3ff', '#0a1424', 0.6))
+    const key = new THREE.DirectionalLight('#e8f4ff', 1.6)
     key.position.set(3, 4, 5)
-    scene.add(key)
+    const back = new THREE.DirectionalLight(HOLO, 2.2)
+    back.position.set(-3, 3, -5)
+    scene.add(key, back)
+
+    const stage = buildStage()
+    scene.add(stage)
 
     const body = buildBody()
     scene.add(body)
@@ -183,6 +280,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
         side: THREE.BackSide,
         transparent: true,
         opacity: 0.7,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
       })
       meshes.forEach((mesh) => {
         const hull = new THREE.Mesh(mesh.geometry, ringMaterial)
@@ -205,14 +304,16 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
       labels.set(region, { label, el, text: '', center })
     })
 
-    const clock = new THREE.Clock()
+    // THREE.Timer replaces the deprecated Clock; connect() avoids a huge jump after a tab switch.
+    const timer = new THREE.Timer()
+    timer.connect(document)
     // region id -> { color, start }
     const glows = new Map()
 
     registerBody({
       glow(region, color) {
         if (!regionMeshes.has(region)) return
-        glows.set(region, { color: new THREE.Color(color), start: clock.getElapsedTime() })
+        glows.set(region, { color: new THREE.Color(color), start: timer.getElapsed() })
       },
       setListening(region) {
         if (region) setSelected(region)
@@ -255,6 +356,24 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
       clickRef.current?.(region)
     }
     renderer.domElement.addEventListener('pointerdown', onPointerDown)
+
+    // Hover: the region under the pointer brightens its rim, and the cursor shows it's tappable.
+    let hovered = null
+    const onPointerMove = (e) => {
+      const rect = renderer.domElement.getBoundingClientRect()
+      pointer.set(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1,
+      )
+      raycaster.setFromCamera(pointer, camera)
+      hovered = raycaster.intersectObjects(body.children)[0]?.object.userData.region ?? null
+      renderer.domElement.style.cursor = hovered ? 'pointer' : 'default'
+    }
+    const onPointerLeave = () => {
+      hovered = null
+    }
+    renderer.domElement.addEventListener('pointermove', onPointerMove)
+    renderer.domElement.addEventListener('pointerleave', onPointerLeave)
     const onKeyDown = (e) => {
       if (e.key === 'Escape') setSelected(null)
     }
@@ -271,9 +390,27 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
     observer.observe(mount)
     resize()
 
+    let intro = null
     renderer.setAnimationLoop(() => {
-      const t = clock.getElapsedTime()
+      timer.update()
+      const t = timer.getElapsed()
       setPainTime(t)
+
+      // Camera intro: ease from the start angle to where the camera should rest.
+      if (intro) {
+        intro.progress = Math.min(1, intro.progress + timer.getDelta() / INTRO_SECONDS)
+        camera.position.lerpVectors(intro.from, intro.to, easeOutCubic(intro.progress))
+        camera.lookAt(controls.target)
+        if (intro.progress === 1) {
+          intro = null
+          controls.enabled = true
+        }
+      }
+
+      // Platform rings breathe slowly.
+      const [innerRing, outerRing] = stage.userData.rings
+      innerRing.material.opacity = 0.42 + 0.14 * Math.sin(t * 1.4)
+      outerRing.material.opacity = 0.18 + 0.08 * Math.sin(t * 1.4 + 1.2)
       const painted = new Map(visitStore.get().painted.map((p) => [p.region, p]))
       body.children.forEach((mesh) => {
         if (!mesh.isMesh) return
@@ -286,6 +423,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
         const glowLevel = g ? glowEnvelope(t, g.start) * GLOW_PEAK : 0
         if (g && glowLevel === 0 && t - g.start > GLOW_RISE_S) glows.delete(region)
         setGlow(mesh.material, g ? g.color : null, glowLevel)
+        const rim = region && region === hovered ? RIM_HOVER : region && region === selectedRef.current ? RIM_SELECTED : RIM_IDLE
+        setRim(mesh.material, rim)
       })
 
       // Rings: selected = steady white, listening = pulsing orange.
@@ -343,6 +482,16 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
       }
     }
 
+    // Camera intro from a raised side angle (skipped when the user prefers reduced motion).
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const to = camera.position.clone()
+      const from = to.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), -0.85).multiplyScalar(1.3)
+      from.y += 1.8
+      camera.position.copy(from)
+      controls.enabled = false
+      intro = { from, to, progress: 0 }
+    }
+
     return () => {
       registerBody(null)
       offSegment()
@@ -351,6 +500,17 @@ export default function BodyScene({ onRegionClick, mode = 'paint' }) {
       observer.disconnect()
       controls.dispose()
       renderer.domElement.removeEventListener('pointerdown', onPointerDown)
+      renderer.domElement.removeEventListener('pointermove', onPointerMove)
+      renderer.domElement.removeEventListener('pointerleave', onPointerLeave)
+      timer.dispose()
+      bloom.dispose()
+      envMap.dispose()
+      scene.background.dispose()
+      stage.traverse((o) => {
+        o.geometry?.dispose()
+        o.material?.map?.dispose()
+        o.material?.dispose()
+      })
       renderer.domElement.removeEventListener('contextmenu', onContextMenu)
       window.removeEventListener('keydown', onKeyDown)
       rings.forEach(({ material }) => material.dispose())
