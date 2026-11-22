@@ -27,3 +27,9 @@
   content: '! ';
   font-weight: 800;
 }
+
+/* Movement check: the area the PT tested. */
+.region-label.assessed {
+  border-color: rgb(94 234 212 / 0.7);
+  color: #99f6e4;
+}

@@ -6,14 +6,17 @@ import { toTen } from '@/scene/intensity'
 import { SPEAKER_NAMES, SPEAKER_TEXT } from '@/lib/visitDisplay'
 import { cn } from '@/lib/utils'
 import LiveSpeech from './LiveSpeech'
+import MovementCheck from './MovementCheck'
+import { ConfirmChecks, PtSummary } from './VisitWrapUp'
 
 // Right panel: the conversation, what was said about a tapped region, and the end-of-visit check.
 export default function ConversationPanel({ visit, mode, selected, missed }) {
   const mentions = selected ? visit.segments.filter((s) => s.regions.includes(selected)) : []
 
   return (
-    <aside className="flex min-h-0 flex-col gap-5 border-l border-border p-5">
+    <aside className="flex min-h-0 flex-col gap-5 overflow-y-auto border-l border-border p-5">
       {mode === 'visit' && <LiveSpeech />}
+      {mode === 'visit' && <MovementCheck visit={visit} />}
 
       {mode === 'ended' && (
         <section className="space-y-2" aria-label="End of visit check">
@@ -50,6 +53,9 @@ export default function ConversationPanel({ visit, mode, selected, missed }) {
           )}
         </section>
       )}
+
+      {mode === 'ended' && <ConfirmChecks visit={visit} />}
+      {mode === 'ended' && <PtSummary visit={visit} missed={missed} />}
 
       {selected && mode !== 'paint' && (
         <section className="space-y-2 rounded-xl bg-secondary/60 p-4" aria-label="Mentions of the selected region">

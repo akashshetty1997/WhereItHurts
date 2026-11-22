@@ -54,6 +54,9 @@ export default function LiveSpeech() {
       text,
       regions: found.regions ?? [],
       path: found.path ?? [],
+      // Used by the movement check: a pain number said, a movement the PT named.
+      rating: found.rating ?? null,
+      movement: found.movement ?? null,
     })
   }
 

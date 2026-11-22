@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import BodyScene from './scene/BodyScene'
 import { selectRegion } from './scene/bodyApi'
 import AppHeader from './panels/AppHeader'
 import IntakePanel from './panels/IntakePanel'
 import ConversationPanel from './panels/ConversationPanel'
-import { useVisit, unmentioned } from './visitStore'
+import { visitStore, useVisit, unmentioned } from './visitStore'
+import { onLine } from './panels/movementLog'
 import { useUser } from './auth/userContext'
 import { PATIENTS, DEFAULT_PATIENT } from './scene/patientRegions'
 
@@ -19,6 +20,8 @@ export default function App() {
   // switch, since they may be looking at someone else's body.
   const [patient, setPatient] = useState(PATIENTS[user?.gender] ? user.gender : DEFAULT_PATIENT)
   const canSwitchBody = user?.role === 'pt' || testMode
+  // Every conversation line feeds the movement check (PT names a movement, patient rates it).
+  useEffect(() => visitStore.onSegment(onLine), [])
   const missed = mode === 'ended' ? unmentioned(visit) : []
 
   return (
