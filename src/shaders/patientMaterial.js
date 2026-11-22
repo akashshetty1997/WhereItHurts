@@ -10,6 +10,8 @@ import { PATIENTS, DEFAULT_PATIENT, SHAPE_ORDER, SHAPE_COUNT } from '../scene/pa
 //   speech glow the speaker's color, fading out
 //   ring        a thin outline on the region's edge: selected, listening, hovered
 //   breathing   the chest rises and falls slightly (vertex displacement)
+//   see-through Show Anatomy: inside a capsule around one region the skin turns see-through
+//               (a Fresnel rim keeps the outline), so the reference anatomy inside shows
 //
 // One program for both materials (body and head); uniforms are shared, so a region painted on
 // the shoulder shows wherever the shoulder's capsule touches either texture.
@@ -32,6 +34,13 @@ const uniforms = {
   uPulse: { value: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] },
   uPulseColor: { value: new THREE.Color(1, 1, 1) },
   uPulseLevel: { value: 0 },
+  // Show Anatomy (src/scene/anatomy.js): a see-through capsule (a→b, radius) in body space,
+  // faded in and out.
+  uXrayA: { value: new THREE.Vector3() },
+  uXrayB: { value: new THREE.Vector3() },
+  uXrayRadius: { value: 0.2 },
+  uXrayLevel: { value: 0 },
+  uXrayShowMark: { value: 1 },
 }
 
 const index = Object.fromEntries(SHAPE_ORDER.map((id, i) => [id, i]))
@@ -48,6 +57,16 @@ export const patientUniforms = {
   setTime(t) {
     uniforms.uTime.value = t
   },
+  // Show Anatomy: a capsule a→b with radius in body space (meters); level 0 = normal skin,
+  // 1 = see-through.
+  setXray(a, b, radius, level, showMark = true) {
+    if (a) uniforms.uXrayA.value.copy(a)
+    if (b) uniforms.uXrayB.value.copy(b)
+    if (radius) uniforms.uXrayRadius.value = radius
+    uniforms.uXrayLevel.value = level
+    uniforms.uXrayShowMark.value = showMark ? 1 : 0
+  },
+  xrayLevel: () => uniforms.uXrayLevel.value,
   setPain(region, type, level) {
     const i = index[region]
     if (i === undefined) return
@@ -92,6 +111,11 @@ const COMMON_GLSL = /* glsl */ `
   uniform vec3 uPulse[3];
   uniform vec3 uPulseColor;
   uniform float uPulseLevel;
+  uniform vec3 uXrayA;
+  uniform vec3 uXrayB;
+  uniform float uXrayRadius;
+  uniform float uXrayLevel;
+  uniform float uXrayShowMark;
   varying vec3 vRest;
 
   float capsuleDist(vec3 p, vec3 a, vec3 b, float r) {
@@ -195,6 +219,21 @@ const EMISSIVE_GLSL = /* glsl */ `
   }
 `
 
+// Show Anatomy: see-through skin near the region, solid outline at grazing angles (Fresnel), and
+// the patient's own pain mark kept visible unless "Hide Mark" is on.
+const XRAY_GLSL = /* glsl */ `
+  if (uXrayLevel > 0.0) {
+    float d = capsuleDist(vRest, uXrayA, uXrayB, 0.0);
+    float inside = 1.0 - smoothstep(uXrayRadius * 0.7, uXrayRadius, d);
+    float facing = abs(dot(normalize(normal), normalize(vViewPosition)));
+    float rim = pow(1.0 - facing, 2.5);
+    float seeThrough = clamp(mix(1.0, 0.08 + 0.55 * rim, uXrayLevel * inside), 0.0, 1.0);
+    seeThrough = max(seeThrough, uXrayShowMark * min(uXrayLevel, 1.0) * inside * anyPain * 0.35);
+    diffuseColor.a *= seeThrough;
+  }
+  #include <opaque_fragment>
+`
+
 // Wrap a loaded glTF material: same textures, physical shading, the app's overlays.
 // restMatrix: the mesh's transform into body space (meters, feet at y = 0).
 export function createPatientMaterial(source, restMatrix, maxAnisotropy = 8) {
@@ -230,8 +269,9 @@ export function createPatientMaterial(source, restMatrix, maxAnisotropy = 8) {
       .replace('#include <common>', `#include <common>\n${COMMON_GLSL}\n${NOISE_GLSL}`)
       .replace('#include <color_fragment>', DIFFUSE_GLSL)
       .replace('#include <emissivemap_fragment>', EMISSIVE_GLSL)
+      .replace('#include <opaque_fragment>', XRAY_GLSL)
   }
-  material.customProgramCacheKey = () => 'patient-material-v3'
+  material.customProgramCacheKey = () => 'patient-material-v4'
   return material
 }
 

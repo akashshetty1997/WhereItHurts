@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import AuthScreen from './AuthScreen'
 import { currentUser, logout as endSession } from './authApi'
+import { clearSavedVisit, visitStore } from '@/visitStore'
+import { resetMovementCheck } from '@/panels/movementLog'
 import { readTestMode, saveTestMode } from './testMode'
 import { UserContext } from './userContext'
 import './auth.css'
@@ -21,6 +23,10 @@ export default function AuthGate({ children }) {
   }, [])
 
   async function logout() {
+    // The next person to log in starts with an empty visit, not this one.
+    clearSavedVisit()
+    visitStore.reset()
+    resetMovementCheck()
     await endSession()
     setUser(null)
   }

@@ -30,6 +30,10 @@
 
 /* Movement check: the area the PT tested. */
 .region-label.assessed {
+  border-color: rgb(15 118 110 / 0.7);
+  color: #0f766e; /* teal-700: 5.5:1 on the light label */
+}
+.dark .region-label.assessed {
   border-color: rgb(94 234 212 / 0.7);
   color: #99f6e4;
 }

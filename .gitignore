@@ -25,3 +25,6 @@ dist-ssr
 
 .env
 .env.local
+
+# BodyParts3D download cache (tools/anatomy/build.mjs)
+tools/anatomy/.cache/

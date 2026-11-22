@@ -32,3 +32,4 @@
 .auth-submit { padding: 0.7rem 1rem; border: 0; background: var(--primary); color: var(--primary-foreground); font-weight: 700; }
 .auth-submit:disabled { opacity: 0.6; cursor: default; }
 .auth-note { margin: 0; font-size: 0.85rem; color: var(--muted-foreground); text-align: center; }
+.auth-demo { background: var(--secondary); color: var(--foreground); }

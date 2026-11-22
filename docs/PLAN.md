@@ -4,6 +4,16 @@ Nov 22, 2026 · Dinesh Bachchani and Akash Shridhar Shetty
 
 v2 narrows the product to physical therapy and adds the movement check, the patient's goal and the PT summary. The first version of this plan is in git history.
 
+## Status (built)
+
+- **Prep by voice:** Record Your Prep, then just talk: pain type, 0–10 and the patient's words per body part, and the goal (keywords first, Claude for free phrasing). Tap-and-pick on the body as the manual way.
+- **Visit, hands-free:** Record the Visit → voice enrollment (one sentence each) → every line labelled PT / Patient and lit on the body; per-sentence speakers; Claude refines each line in the background (missed parts, rating, movement, follow-up).
+- **Movement check, Before/After on the body, confirm cards, PT summary, amber catch, pain-path pulse** (Dinesh).
+- **New Visit**, visit kept across a refresh, demo accounts (patient / PT), Testing mode, light / dark, view controls without a mouse.
+- **Public link:** frontend only ("Try the Demo"); the live demo runs on the laptop (`docs/DEMO_SCRIPT.md`).
+- **Show Anatomy** (PT or Testing mode): select a body part → see-through skin with BodyParts3D bones, muscles and joints fitted to each body (all 7 regions, male and female); click a structure for its plain name, Explain to Patient, Add to Report (discussed / examined + the PT's words).
+- **PT Report and Take-Home Summary:** print or Save as PDF from the Summary step, with front and back body maps (`src/panels/Report.jsx`).
+
 ## Overview
 
 WhereItHurts puts what the patient feels and what the physical therapist (PT) tests on one 3D body.

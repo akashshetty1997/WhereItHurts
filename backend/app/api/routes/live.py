@@ -41,7 +41,7 @@ async def live(ws: WebSocket) -> None:
     segmenter = Segmenter(transcription.vad_model)
     prep = ws.query_params.get("mode") == LIVE_MODE_PREP
     session = LiveSession(
-        transcription.text_of, transcription.voice_of, single_speaker="patient" if prep else None
+        transcription.words_of, transcription.voice_of, single_speaker="patient" if prep else None
     )
     # Sentences and enroll commands share one queue, so they're handled in the order they came.
     queue: asyncio.Queue = asyncio.Queue()
@@ -57,7 +57,8 @@ async def live(ws: WebSocket) -> None:
             if isinstance(item, str):  # an enroll command
                 await send(session.enroll(item))
             else:  # models run off the event loop, so the socket keeps receiving audio
-                await send(await asyncio.to_thread(session.handle, item))
+                for event in await asyncio.to_thread(session.handle, item):
+                    await send(event)
 
     task = asyncio.create_task(worker())
     await send({"type": "ready"})

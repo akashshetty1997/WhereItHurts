@@ -34,6 +34,10 @@ description of it. Otherwise null.
 - pain_type: one of {pain_types} when the speaker describes how it feels \
 ("dull", "throbbing" -> aching; "stabbing", "shooting" -> sharp; "hot" -> burning). Otherwise null.
 - follow_up: if the PT proposes a follow-up visit or next appointment, the sentence. Otherwise null.
+- goal: only when the line is from the pre-visit intake (the previous line says so) and the patient says what \
+they want to be able to do again or achieve. A short phrase in their words, starting with a verb or "No", \
+e.g. "Put plates on the top shelf", "No pain in day-to-day activities". Speech-to-text often mishears this \
+("anthem role" means "end goal"). Otherwise null.
 - corrected_text: if speech-to-text clearly misheard an anatomy or PT word ("bison" -> "bicep", \
 "rotator cup" -> "rotator cuff"), the sentence with only those words fixed. Otherwise null.
 
@@ -78,6 +82,7 @@ def _schema_json() -> str:
             "pain_type": _nullable({"type": "string", "enum": list(PAIN_TYPES)}),
             "follow_up": _nullable({"type": "string"}),
             "corrected_text": _nullable({"type": "string"}),
+            "goal": _nullable({"type": "string"}),
         },
         "required": [
             "regions",
@@ -87,6 +92,7 @@ def _schema_json() -> str:
             "pain_type",
             "follow_up",
             "corrected_text",
+            "goal",
         ],
         "additionalProperties": False,
     }

@@ -9,6 +9,7 @@ from functools import lru_cache
 
 from app.constants import (
     FOLLOW_UP_WORDS,
+    GOAL_FILLERS,
     GOAL_LEADS,
     MOVEMENT_WORDS,
     NOT_A_MENTION,
@@ -93,14 +94,18 @@ def _pain_type(lower: str) -> str | None:
     return min(hits, key=hits.get) if hits else None
 
 
+_LEADS = "|".join(re.escape(lead) for lead in sorted(GOAL_LEADS, key=len, reverse=True))
+_FILLERS = "|".join(re.escape(word) for word in GOAL_FILLERS)
+_GOAL = re.compile(rf"^\W*(?:(?:{_FILLERS})\W+){{0,3}}?(?:i\s*)?(?:{_LEADS})\s+(.+)", re.IGNORECASE)
+
+
 def _goal(text: str) -> str | None:
-    """ "I want to be able to put plates on the top shelf." -> "Put plates on the top shelf"."""
-    lower = text.lower()
-    for lead in sorted(GOAL_LEADS, key=len, reverse=True):
-        if (at := lower.find(lead)) != -1:
-            rest = text[at + len(lead) :].strip(" ,.!?")
-            if rest:
-                return rest[0].upper() + rest[1:]
+    """ "I want to be able to put plates on the top shelf." -> "Put plates on the top shelf".
+    Checked at the start of each sentence (one clip can hold two when the speaker barely pauses),
+    so "it hurts when I want to lift" isn't a goal."""
+    for sentence in re.split(r"(?<=[.!?])\s+", text.strip()):
+        if (m := _GOAL.match(sentence)) and (rest := m.group(1).strip(" ,.!?")):
+            return rest[0].upper() + rest[1:]
     return None
 
 

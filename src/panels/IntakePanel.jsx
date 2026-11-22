@@ -1,8 +1,8 @@
-import { CircleAlert, Mic, Plus } from 'lucide-react'
+import { useState } from 'react'
+import { CircleAlert, Pencil, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { visitStore } from '@/visitStore'
-import { useHoldToSpeak } from './useHoldToSpeak'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { PATIENTS } from '@/scene/patientRegions'
@@ -123,49 +123,44 @@ export default function IntakePanel({ visit, mode, missed, selected, onSelectReg
   )
 }
 
-// The patient's goal: what they want to be able to do again. Spoken (hold the button) or typed;
-// pinned here for the whole visit.
+// The patient's goal: what they want to be able to do again. Said while recording the prep (right
+// panel, src/panels/PrepListen.jsx) or typed here; pinned for the whole visit.
 function GoalSection({ goal, editable }) {
-  const speech = useHoldToSpeak((text) => visitStore.setGoal(text))
+  const [editing, setEditing] = useState(false)
+  const typing = editable && (!goal?.text || editing)
   return (
     <section aria-label="What you want to do again" className="space-y-2">
       <h3 className="text-sm font-bold text-muted-foreground">Your Goal</h3>
-      {goal?.text ? (
+      {goal?.text && !editing ? (
         <p className="text-lg font-bold leading-snug">“{goal.text}”</p>
       ) : (
         <p className="text-sm leading-snug text-muted-foreground">
-          {speech.listening ? speech.interim || 'Listening…' : 'What would you like to be able to do again?'}
+          What would you like to be able to do again? Say it while recording your prep, or type it.
         </p>
       )}
-      {editable && (
-        <>
-          {speech.supported && (
-            <Button
-              variant="secondary"
-              className={cn('w-full touch-none gap-2 font-bold select-none', speech.listening && 'bg-patient text-background')}
-              onPointerDown={speech.start}
-              onPointerUp={speech.stop}
-              onPointerLeave={() => speech.listening && speech.stop()}
-              onKeyDown={(e) => e.key === ' ' && !e.repeat && speech.start()}
-              onKeyUp={(e) => e.key === ' ' && speech.stop()}
-              aria-pressed={speech.listening}
-            >
-              <Mic className="size-4" aria-hidden />
-              {speech.listening ? 'Listening… release when done' : goal?.text ? 'Hold to Say It Again' : 'Hold to Say Your Goal'}
-            </Button>
-          )}
-          {speech.error && <p className="text-sm text-flag">{speech.error}</p>}
-          {!goal?.text && <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              const field = e.currentTarget.elements.goal
-              visitStore.setGoal(field.value)
-              field.value = ''
-            }}
-          >
-            <Input name="goal" placeholder="Or type it, then press Return" aria-label="Type your goal" />
-          </form>}
-        </>
+      {typing && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            const value = e.currentTarget.elements.goal.value
+            if (value.trim()) visitStore.setGoal(value)
+            setEditing(false)
+          }}
+        >
+          <Input
+            name="goal"
+            defaultValue={editing ? goal?.text : ''}
+            placeholder="Type it, then press Return"
+            aria-label="Type your goal"
+            autoFocus={editing}
+          />
+        </form>
+      )}
+      {editable && goal?.text && !editing && (
+        <Button variant="ghost" size="sm" className="-ml-2 gap-2" onClick={() => setEditing(true)}>
+          <Pencil className="size-4" aria-hidden />
+          Change Goal
+        </Button>
       )}
     </section>
   )
