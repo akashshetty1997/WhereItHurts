@@ -47,6 +47,19 @@ export function anatomyLayer(layer, visible) {
   impl?.anatomyLayer(layer, visible)
 }
 
+// Movement simulations (everyone): Reach Up, Turn Head, Bend Knee (src/scene/movements.js).
+// playMovement plays one sweep (voice: the PT asked for it; direction -1 turns the other way) and
+// returns to the skin afterwards. preloadAnatomy fetches the anatomy file ahead of time.
+export function openMovement(region) {
+  impl?.openMovement(region)
+}
+export function playMovement(region, label, direction) {
+  impl?.playMovement(region, label, direction)
+}
+export function preloadAnatomy() {
+  impl?.preloadAnatomy()
+}
+
 // Reports: a still of the whole body, 'front' or 'back', on white. Returns { url, aspect } (a PNG
 // data URL and its width / height), or null before the body has mounted.
 export function snapshot(side) {

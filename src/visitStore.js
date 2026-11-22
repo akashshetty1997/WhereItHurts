@@ -11,6 +11,7 @@ export const emptyVisit = () => ({
   followUps: [],
   observations: [],
   anatomyNotes: [],
+  painArcs: {}, // Reach Up: { right_shoulder: { from, to } } in degrees of arm raise
 })
 
 // The visit is kept in this browser, so a page refresh mid-visit loses nothing. New Visit and
@@ -130,6 +131,14 @@ export const visitStore = {
     }
     emit()
     return id
+  },
+  // Reach Up: where raising the arm hurts, { from, to } in degrees, or null to clear.
+  setPainArc(region, arc) {
+    const painArcs = { ...(state.painArcs ?? {}) }
+    if (arc) painArcs[region] = arc
+    else delete painArcs[region]
+    state = { ...state, painArcs }
+    emit()
   },
   removeAnatomyNote(id) {
     state = { ...state, anatomyNotes: (state.anatomyNotes ?? []).filter((n) => n.id !== id) }

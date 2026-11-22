@@ -14,13 +14,16 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { VignetteShader } from 'three/addons/shaders/VignetteShader.js'
 import { visitStore, useVisit, unmentioned } from '../visitStore'
 import { regionLabel } from '../regions'
-import { registerBody, emitRegionClick, glow, setListening, pulse, showAnatomy, anatomyLayer } from './bodyApi'
+import { registerBody, emitRegionClick, glow, setListening, pulse, showAnatomy, anatomyLayer, openMovement, preloadAnatomy } from './bodyApi'
 import { DEV_SEGMENTS, DEV_SEGMENT_GAP_MS } from './devSegments'
 import { extract } from '@/lib/api'
 import IntakePicker from './IntakePicker'
 import { toTen, toUnit } from './intensity'
 import { PATIENTS, DEFAULT_PATIENT, SHAPE_ORDER, regionAt, regionAnchor } from './patientRegions'
 import { createAnatomy } from './anatomy'
+import { createMovementSim } from './movementSim'
+import { MOVEMENTS } from './movements'
+import MovementPanel from './MovementPanel'
 import AnatomyOverlay from './AnatomyOverlay'
 import { createPatientMaterial, patientUniforms } from '../shaders/patientMaterial'
 import {
@@ -32,6 +35,7 @@ import {
   ChevronsUp,
   Bone,
   Focus,
+  Hand,
   Gamepad2,
   Maximize2,
   RotateCcw,
@@ -313,6 +317,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
   const [anatomyOpen, setAnatomyOpen] = useState(null)
   const [structure, setStructure] = useState(null)
   const [hoverLabel, setHoverLabel] = useState(null)
+  const simRef = useRef(null) // the open movement simulation (src/scene/movementSim.js)
   const [layers, setLayers] = useState({ skin: true, muscle: true, bone: true, mark: true })
   const canAnatomyRef = useRef(canShowAnatomy)
   canAnatomyRef.current = canShowAnatomy
@@ -325,6 +330,22 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
   useEffect(() => {
     if (mode !== 'paint') setSelected(null)
   }, [mode])
+  // A new step closes anatomy and Reach Up, so nothing hides the end-of-visit flags; the visit
+  // preloads the anatomy, so a spoken "raise your arm" plays without waiting for the file.
+  const firstMode = useRef(true)
+  useEffect(() => {
+    if (firstMode.current) {
+      firstMode.current = false
+    } else {
+      showAnatomy(null)
+    }
+    if (mode === 'visit') preloadAnatomy()
+  }, [mode])
+  // The band where the patient said it hurts follows the visit.
+  const painArc = anatomyOpen?.sim ? (visit.painArcs?.[anatomyOpen.region] ?? null) : null
+  useEffect(() => {
+    simRef.current?.setArc(painArc)
+  }, [painArc, anatomyOpen])
 
   useEffect(() => {
     const mount = mountRef.current
@@ -539,6 +560,9 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         return { url, aspect: renderer.domElement.width / renderer.domElement.height }
       },
       showAnatomy: (region) => (region ? openAnatomy(region) : closeAnatomy()),
+      openMovement: (region) => openAnatomy(region, { sim: true }),
+      playMovement: (region, label, direction) => playMovement(region, label, direction),
+      preloadAnatomy: () => anatomy.preload(),
       anatomyLayer: (layer, visible) => setAnatomyLayer(layer, visible),
       select(region) {
         setSelected(region)
@@ -564,11 +588,17 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         }
       }
     }
-    async function openAnatomy(region) {
+    const sims = new Map() // region -> movement simulation, made the first time it opens
+    let simActive = null // the open one
+    let lastBandGlow = 0
+    async function openAnatomy(region, { sim = false, label = null } = {}) {
       if (!anatomy.has(region)) return
       const request = ++anatomyRequest
+      simActive?.reset()
+      simActive = null
+      simRef.current = null
       anatomyRegion = region
-      setAnatomyOpen({ region, ready: false })
+      setAnatomyOpen({ region, ready: false, sim, label })
       setStructure(null)
       let ok = false
       try {
@@ -582,20 +612,63 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         anatomyRegion = null
         return setAnatomyOpen(null)
       }
-      const fit = anatomy.region().fit
-      // See-through around the anchor, or along a limb (fit.xray: { a, b, r }).
-      xray.a.copy(fit.xray?.a ?? fit.target)
-      xray.b.copy(fit.xray?.b ?? fit.target)
-      xray.radius = fit.xray?.r ?? 0.28
-      xray.goal = 1
+      const entry = anatomy.region()
+      const fit = entry.fit
+      const movement = MOVEMENTS[region]
+      if (sim && entry.rig && movement) {
+        // A movement simulation: the baked body can't move, so the skin over the moving part
+        // becomes a ghost outline and the bones move inside it.
+        if (!sims.has(region)) sims.set(region, createMovementSim(movement, entry, { reduceMotion }))
+        simActive = sims.get(region)
+        simActive.setArc(visitStore.get().painArcs?.[region] ?? null)
+        simActive.show(true)
+        simRef.current = simActive
+        const ghost = movement.ghost(entry)
+        xray.a.copy(ghost.a)
+        xray.b.copy(ghost.b)
+        xray.radius = ghost.r
+        xray.goal = 1.6
+      } else {
+        // See-through around the anchor, or along a limb (fit.xray: { a, b, r }).
+        xray.a.copy(fit.xray?.a ?? fit.target)
+        xray.b.copy(fit.xray?.b ?? fit.target)
+        xray.radius = fit.xray?.r ?? 0.28
+        xray.goal = 1
+      }
       setSkinSeeThrough(true)
       gtao.blendIntensity = 0
       bloom.enabled = false // light bones would bloom into a white haze
-      setAnatomyOpen({ region, ready: true })
-      focusRegion(region)
+      setAnatomyOpen({ region, ready: true, sim: !!simActive, label })
+      if (simActive) {
+        const view = movement.camera(entry)
+        moveTo({ target: patientRoot.localToWorld(view.at), radius: view.radius, phi: view.phi, theta: view.theta })
+      } else {
+        focusRegion(region)
+      }
+    }
+    // Voice: the PT asked for a movement ("raise your arm", "turn your head to the left"). Open its
+    // simulation, play one sweep (direction -1: the other way), and go back to the skin afterwards
+    // unless someone took the slider.
+    async function playMovement(region, label, direction = 1) {
+      if (!MOVEMENTS[region] || !model.anatomy?.[region]) return
+      if (simActive?.movement !== MOVEMENTS[region]) await openAnatomy(region, { sim: true, label })
+      else setAnatomyOpen((open) => (open ? { ...open, label } : open))
+      if (!simActive || disposed) return
+      const sim = simActive
+      sim.play(() => {
+        if (!sim.touched && simActive === sim) closeAnatomy()
+      }, direction)
     }
     function closeAnatomy() {
       anatomyRequest++
+      // Reach Up zooms out of the whole body; leaving it shows the whole body again (so the end of
+      // the visit never opens on a close-up that hides an amber flag).
+      if (simActive) {
+        simActive.reset()
+        resetView()
+      }
+      simActive = null
+      simRef.current = null
       anatomyRegion = null
       anatomy.hide()
       xray.goal = 0
@@ -696,6 +769,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       press = null
       if (moved > TAP_MAX_MOVE || !quick) return
       if (anatomy.current()) {
+        // Picking bones and muscles (and Add to Report) is a PT tool, and not part of Reach Up.
+        if (simActive || !canAnatomyRef.current) return
         const mesh = structureUnder(e)
         anatomy.highlight(mesh, 0.35)
         setStructure(mesh ? { ...mesh.userData } : null)
@@ -757,7 +832,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       '?': () => setShowControls((open) => !open),
     }
     const onKeyDown = (e) => {
-      if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return
+      // Typing, or arrow keys on a slider (Reach Up), aren't camera moves.
+      if (e.target.closest?.('input, textarea, select, [contenteditable="true"], [role="slider"]')) return
       if (e.metaKey || e.ctrlKey || e.altKey) return
       if (e.key === 'Escape') return anatomyRegion ? closeAnatomy() : setSelected(null)
       if (e.key.toLowerCase() === 'x' && canAnatomyRef.current) {
@@ -878,7 +954,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
 
       if (pendingMove) {
         if (anatomy.current()) {
-          const mesh = structureUnder(pendingMove)
+          const mesh = simActive || !canAnatomyRef.current ? null : structureUnder(pendingMove)
           if (mesh !== hoveredStructure) {
             hoveredStructure = mesh
             setHoverLabel(mesh?.userData.label ?? null)
@@ -903,6 +979,12 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         }
       }
       patientUniforms.setXray(xray.a, xray.b, xray.radius, xray.level, xray.showMark)
+
+      // Reach Up: move the arm, and pulse the shoulder while it's inside the band where it hurts.
+      if (simActive && simActive.update(timer.getDelta()) && t - lastBandGlow > 1.2) {
+        lastBandGlow = t
+        glow(anatomyRegion, SPEAKER_COLORS.patient)
+      }
 
       // A person never stands perfectly still: a slow, tiny weight shift from the feet.
       patientRoot.rotation.z = Math.sin(t * 0.55) * 0.004
@@ -1011,7 +1093,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       const devAnatomy = params.get('anatomy')
       if (devAnatomy) setTimeout(() => openAnatomy(devAnatomy), 2500)
       // For screenshot scripts: camera and anatomy controls from the console.
-      window.__scene = { moveTo, currentView, openAnatomy, closeAnatomy, setAnatomyLayer, THREE, patientRoot, patientMeshes, anatomy }
+      window.__scene = { moveTo, currentView, openAnatomy, closeAnatomy, setAnatomyLayer, THREE, patientRoot, patientMeshes, anatomy, playMovement, sim: () => simActive }
       const devRegion = params.get('glow')
       if (devRegion) {
         const fire = () => glow(devRegion, SPEAKER_COLORS.pt)
@@ -1111,6 +1193,12 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
               Close Up: {fullRegionLabel(selected)}
             </Button>
           )}
+          {selected && !anatomyOpen && MOVEMENTS[selected] && PATIENTS[patient]?.anatomy?.[selected] && (
+            <Button variant="secondary" className="gap-2" onClick={() => openMovement(selected)} title={MOVEMENTS[selected].question}>
+              <Hand className="size-4" aria-hidden />
+              {MOVEMENTS[selected].button}
+            </Button>
+          )}
           {selected && !anatomyOpen && canShowAnatomy && PATIENTS[patient]?.anatomy?.[selected] && (
             <Button
               variant="secondary"
@@ -1132,7 +1220,16 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       {!loaded && (
         <p className="absolute inset-x-0 top-1/2 text-center text-sm text-muted-foreground">Loading the patient…</p>
       )}
-      {anatomyOpen && (
+      {anatomyOpen?.sim && (
+        <MovementPanel
+          region={anatomyOpen.region}
+          sim={anatomyOpen.ready ? simRef.current : null}
+          label={anatomyOpen.label}
+          arc={painArc}
+          onClose={() => showAnatomy(null)}
+        />
+      )}
+      {anatomyOpen && !anatomyOpen.sim && (
         <AnatomyOverlay
           region={anatomyOpen.region}
           ready={anatomyOpen.ready}
