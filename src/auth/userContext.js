@@ -1,5 +1,5 @@
 // The logged-in user, from AuthGate. useUser() gives:
-//   user          { id, name, email, role: 'patient' | 'pt' }
+//   user          { id, name, email, role: 'patient' | 'pt', gender: 'female' | 'male' }
 //   logout()
 //   testMode      true: act as both patient and PT (both talk buttons), for testing alone
 //   setTestMode(on)

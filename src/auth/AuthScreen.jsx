@@ -2,9 +2,15 @@
 import { useState } from 'react'
 import { PASSWORD_MIN_CHARS, ROLES, login, register } from './authApi'
 
+// Which 3D patient the app shows for this account (backend: constants.GENDERS).
+const GENDERS = [
+  { id: 'female', label: 'Female' },
+  { id: 'male', label: 'Male' },
+]
+
 export default function AuthScreen({ onLoggedIn, testMode, onTestModeChange }) {
   const [mode, setMode] = useState('login') // login | register
-  const [fields, setFields] = useState({ name: '', email: '', password: '', role: 'patient' })
+  const [fields, setFields] = useState({ name: '', email: '', password: '', role: 'patient', gender: '' })
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
 
@@ -38,7 +44,7 @@ export default function AuthScreen({ onLoggedIn, testMode, onTestModeChange }) {
 
         <div className="auth-tabs" role="tablist">
           <button type="button" role="tab" aria-selected={mode === 'login'} onClick={() => switchTo('login')}>
-            Log in
+            Log In
           </button>
           <button type="button" role="tab" aria-selected={mode === 'register'} onClick={() => switchTo('register')}>
             Register
@@ -53,6 +59,22 @@ export default function AuthScreen({ onLoggedIn, testMode, onTestModeChange }) {
                 <label key={r.id} className={fields.role === r.id ? 'on' : ''}>
                   <input type="radio" name="role" value={r.id} checked={fields.role === r.id} onChange={set('role')} />
                   {r.label}
+                </label>
+              ))}
+            </fieldset>
+            <fieldset className="auth-roles">
+              <legend>{fields.role === 'pt' ? 'Patient body to show' : 'My body in 3D'}</legend>
+              {GENDERS.map((g) => (
+                <label key={g.id} className={fields.gender === g.id ? 'on' : ''}>
+                  <input
+                    type="radio"
+                    name="gender"
+                    value={g.id}
+                    checked={fields.gender === g.id}
+                    onChange={set('gender')}
+                    required
+                  />
+                  {g.label}
                 </label>
               ))}
             </fieldset>
@@ -91,7 +113,7 @@ export default function AuthScreen({ onLoggedIn, testMode, onTestModeChange }) {
         {error && <div className="card warn">{error}</div>}
 
         <button className="auth-submit" type="submit" disabled={busy}>
-          {busy ? 'Please wait…' : mode === 'register' ? 'Create account' : 'Log in'}
+          {busy ? 'Please wait…' : mode === 'register' ? 'Create Account' : 'Log In'}
         </button>
         <p className="auth-note">Demo accounts only. Never enter real health information.</p>
       </form>

@@ -131,6 +131,9 @@ PT_TERMS_ALIAS_SEPARATOR = "|"
 # --- Accounts (demo login/register) --------------------------------------------------------
 
 USER_ROLES = ("patient", "pt")  # pt = the physical therapist
+# Picks which 3D patient (avatar) the app shows. Accounts made before this field are "male".
+GENDERS = ("female", "male")
+DEFAULT_GENDER = "male"
 NAME_MAX_CHARS = 80
 EMAIL_MAX_CHARS = 254
 PASSWORD_MIN_CHARS = 8

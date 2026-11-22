@@ -13,6 +13,7 @@ import threading
 from pathlib import Path
 
 from app.constants import (
+    DEFAULT_GENDER,
     SALT_BYTES,
     SCRYPT_KEY_BYTES,
     SCRYPT_N,
@@ -28,6 +29,7 @@ CREATE TABLE IF NOT EXISTS users (
     name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
     role TEXT NOT NULL,
+    gender TEXT NOT NULL DEFAULT 'male',
     password_hash BLOB NOT NULL,
     salt BLOB NOT NULL
 );
@@ -59,6 +61,13 @@ class AccountStore:
         self._db.row_factory = sqlite3.Row
         self._db.execute("PRAGMA foreign_keys = ON")
         self._db.executescript(_SCHEMA)
+        # Databases created before the gender field: add it, existing accounts default to male.
+        columns = {row["name"] for row in self._db.execute("PRAGMA table_info(users)")}
+        if "gender" not in columns:
+            self._db.execute(
+                f"ALTER TABLE users ADD COLUMN gender TEXT NOT NULL DEFAULT '{DEFAULT_GENDER}'"
+            )
+            self._db.commit()
         # FastAPI runs sync routes on worker threads; one connection, one writer at a time.
         self._lock = threading.Lock()
 
@@ -70,7 +79,7 @@ class AccountStore:
         self._db.execute("INSERT INTO sessions (token, user_id) VALUES (?, ?)", (token, user_id))
         self._db.commit()
         row = self._db.execute(
-            "SELECT id, name, email, role FROM users WHERE id = ?", (user_id,)
+            "SELECT id, name, email, role, gender FROM users WHERE id = ?", (user_id,)
         ).fetchone()
         return Session(token=token, user=User(**dict(row)))
 
@@ -79,9 +88,16 @@ class AccountStore:
         with self._lock:
             try:
                 cursor = self._db.execute(
-                    "INSERT INTO users (name, email, role, password_hash, salt) "
-                    "VALUES (?, ?, ?, ?, ?)",
-                    (body.name, body.email, body.role, _hash(body.password, salt), salt),
+                    "INSERT INTO users (name, email, role, gender, password_hash, salt) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (
+                        body.name,
+                        body.email,
+                        body.role,
+                        body.gender,
+                        _hash(body.password, salt),
+                        salt,
+                    ),
                 )
             except sqlite3.IntegrityError as exc:
                 raise EmailTakenError(body.email) from exc
@@ -102,7 +118,7 @@ class AccountStore:
     def user_for(self, token: str) -> User | None:
         with self._lock:
             row = self._db.execute(
-                "SELECT u.id, u.name, u.email, u.role FROM sessions s "
+                "SELECT u.id, u.name, u.email, u.role, u.gender FROM sessions s "
                 "JOIN users u ON u.id = s.user_id WHERE s.token = ?",
                 (token,),
             ).fetchone()

@@ -3,7 +3,9 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 from app.constants import (
+    DEFAULT_GENDER,
     EMAIL_MAX_CHARS,
+    GENDERS,
     NAME_MAX_CHARS,
     PASSWORD_MAX_CHARS,
     PASSWORD_MIN_CHARS,
@@ -11,6 +13,7 @@ from app.constants import (
 )
 
 Role = Literal[USER_ROLES]  # type: ignore[valid-type]
+Gender = Literal[GENDERS]  # type: ignore[valid-type]
 
 
 def _email(value: str) -> str:
@@ -26,6 +29,7 @@ class RegisterRequest(BaseModel):
     email: str = Field(max_length=EMAIL_MAX_CHARS)
     password: str = Field(min_length=PASSWORD_MIN_CHARS, max_length=PASSWORD_MAX_CHARS)
     role: Role
+    gender: Gender = DEFAULT_GENDER
 
     _check_email = field_validator("email")(_email)
 
@@ -49,6 +53,7 @@ class User(BaseModel):
     name: str
     email: str
     role: Role
+    gender: Gender
 
 
 class Session(BaseModel):

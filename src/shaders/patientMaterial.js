@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { REGION_SHAPES, SHAPE_ORDER, SHAPE_COUNT } from '../scene/patientRegions'
+import { PATIENTS, DEFAULT_PATIENT, SHAPE_ORDER, SHAPE_COUNT } from '../scene/patientRegions'
 
 // The realistic patient's material: the model's own PBR textures on a MeshPhysicalMaterial (sheen
 // for the soft grazing light on skin and fabric), plus everything the app draws on the body,
@@ -19,9 +19,9 @@ const N = SHAPE_COUNT
 
 const uniforms = {
   uTime: { value: 0 },
-  uShapeA: { value: SHAPE_ORDER.map((id) => REGION_SHAPES[id].a.clone()) },
-  uShapeB: { value: SHAPE_ORDER.map((id) => REGION_SHAPES[id].b.clone()) },
-  uShapeR: { value: SHAPE_ORDER.map((id) => REGION_SHAPES[id].r) },
+  uShapeA: { value: SHAPE_ORDER.map(() => new THREE.Vector3()) },
+  uShapeB: { value: SHAPE_ORDER.map(() => new THREE.Vector3()) },
+  uShapeR: { value: new Array(N).fill(0) },
   uPainType: { value: new Array(N).fill(0) },
   uPainLevel: { value: new Array(N).fill(0) },
   uGlowColor: { value: Array.from({ length: N }, () => new THREE.Color(0, 0, 0)) },
@@ -33,6 +33,14 @@ const uniforms = {
 const index = Object.fromEntries(SHAPE_ORDER.map((id, i) => [id, i]))
 
 export const patientUniforms = {
+  // The region capsules of the patient on screen (scene/patientRegions.js → PATIENTS).
+  setShapes(shapes) {
+    SHAPE_ORDER.forEach((id, i) => {
+      uniforms.uShapeA.value[i].copy(shapes[id].a)
+      uniforms.uShapeB.value[i].copy(shapes[id].b)
+      uniforms.uShapeR.value[i] = shapes[id].r
+    })
+  },
   setTime(t) {
     uniforms.uTime.value = t
   },
@@ -182,6 +190,11 @@ export function createPatientMaterial(source, restMatrix, maxAnisotropy = 8) {
     sheenRoughness: 0.55,
     sheenColor: new THREE.Color('#ffd9c4'),
     specularIntensity: 0.55,
+    // Hair cards are alpha-cut and two-sided; keep the model's settings.
+    alphaMap: source.alphaMap,
+    alphaTest: source.alphaTest,
+    transparent: source.transparent,
+    side: source.side,
   })
   for (const t of [material.map, material.normalMap, material.roughnessMap]) {
     if (t) t.anisotropy = maxAnisotropy
@@ -200,3 +213,5 @@ export function createPatientMaterial(source, restMatrix, maxAnisotropy = 8) {
   material.customProgramCacheKey = () => 'patient-material-v2'
   return material
 }
+
+patientUniforms.setShapes(PATIENTS[DEFAULT_PATIENT].shapes)
