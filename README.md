@@ -14,6 +14,19 @@ npm run dev      # http://localhost:5173
 npm run build
 ```
 
+### Backend
+
+FastAPI in [backend/](backend/): `POST /api/extract` (sentence → regions, pain path) and `POST /api/transcribe` (recording → speaker-labelled lines). The Vite dev server proxies `/api` to it. Needs Python 3.12, [uv](https://docs.astral.sh/uv/) and ffmpeg.
+
+```bash
+cd backend
+cp .env.example .env    # add ANTHROPIC_API_KEY (optional: keywords work without it)
+uv sync
+uv run uvicorn app.main:app --reload --port 8000 --no-access-log
+```
+
+Speech models for `/api/transcribe` are optional; see [backend/README.md](backend/README.md).
+
 ## Layout
 
 | File | Purpose |

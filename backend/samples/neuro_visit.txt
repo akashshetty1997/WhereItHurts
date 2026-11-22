@@ -1,0 +1,13 @@
+D|Hi Grace, good to see you again. How has the dizziness been since we started the midodrine?
+P|Better in the mornings, but I still get lightheaded after lunch, especially when I stand up quickly.
+D|Okay. Are you still taking the propranolol twenty milligrams twice a day?
+P|Yes, and the levothyroxine fifty micrograms every morning. I also started magnesium glycinate for the migraines.
+D|Good. Any fainting episodes, chest pain, or palpitations?
+P|No fainting, but my heart races sometimes, maybe three times a week. And the brain fog is worse in the afternoon.
+D|That fits with postural orthostatic tachycardia syndrome. I'd like to order a tilt table test and a twenty four hour Holter monitor.
+P|Will I need to stop any medications before the tilt table test?
+D|Hold the midodrine for forty eight hours before the test. Keep taking the levothyroxine.
+P|Okay. What about the salt? You mentioned that last time.
+D|Increase salt to about three to five grams a day and drink at least two liters of water. Compression stockings can help too.
+P|Should I see cardiology?
+D|Yes, I'll send a referral to Doctor Patel in cardiology, and let's follow up here in six weeks to review the results.

@@ -1,0 +1,37 @@
+# Synthetic two-speaker conversation for diarization diagnostics (scripts/make_diarization_sample.py).
+# Invented for testing: no real patient, recording or health record.
+#
+# Format: who|gap_seconds|text
+#   who  D = provider, P = patient
+#   gap  seconds after the latest line so far ends (the first line: from the start of the audio).
+#        0 = straight after, no pause. Negative = starts before it ends (overlap).
+#
+# Leading silence, then a question with no punctuation.
+D|0.5|so what brings you in today
+# Speaker change with no pause and no punctuation on either side.
+P|0|my knees have been sore for about a month and the stairs are getting hard
+D|0|okay
+P|0.1|yeah
+D|0|and is it both knees or mostly one of them
+P|0|mostly the left one
+# Brief answers back and forth, short gaps.
+D|0.2|any swelling
+P|0.15|no
+D|0.15|stiffness in the morning
+P|0.1|a little
+D|0|for how long
+P|0.1|maybe ten minutes
+# A long pause, then a long provider turn (over 12 seconds) with commas but no full stop.
+D|1.5|alright here is what I am thinking, it sounds like this is mostly in the joint itself, so I would like to start with an x-ray of the left knee, then we can talk about some exercises you can do at home, and if things are not better in a few weeks we can look at other options together
+# Interruption: the patient starts before the provider finishes.
+P|-0.6|sorry can I ask something
+D|0.2|of course go ahead
+# A long patient turn (over 12 seconds), punctuated as one would read it.
+P|0.4|I tried resting it for a couple of weeks, and I used an ice pack most evenings. It helped a little at first, but now it aches again by the afternoon. I also bought a knee sleeve, and I am not sure if it does anything or if I should stop wearing it.
+# A backchannel spoken over the provider's longer reply.
+D|0.3|that is a good question, the sleeve is fine to keep wearing if it feels supportive, it will not hurt the joint, and the ice is a good idea too
+P|-3.0|mm hmm
+# Silence, then a closing exchange with no punctuation and no pause.
+D|2.0|so we will get the x-ray and see you back in six weeks
+P|0|sounds good thank you
+D|0|take care

@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.env
+# Speech models (about 520 MB, see README) or a link to them
+models
+samples/*.wav
+samples/*.m4a
+samples/*.webm
