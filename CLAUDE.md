@@ -7,7 +7,7 @@ Hackathon app (Sundai Hack 150): before a physical therapy (PT) visit the patien
 | What | Where |
 |---|---|
 | Plan, data model, role-play script, timeline | `docs/PLAN.md` |
-| UI design rules (any change to how the frontend looks) | the `apple-design` skill (personal install, see below) |
+| UI design rules (any change to how the frontend looks) | the `apple-design` skill, `.claude/skills/apple-design/` |
 | Frontend (Vite + React + Three.js) | repo root: `src/`, `vite.config.js` |
 | Visit state contract | `src/mockVisit.js`, `src/visitStore.js` |
 | Region ids (keep in sync with `backend/app/constants.py`) | `src/regions.js` |
@@ -27,15 +27,7 @@ The frontend calls the backend as `fetch('/api/...')` through the Vite proxy.
 
 For any frontend UI work (new screens, panels, restyling, reviewing a screenshot), load the `apple-design` skill first and follow Apple's Human Interface Guidelines through it: accessibility and contrast first, then layout, typography and color. The app is shown on a projector, so favor legibility at a distance. Keep using the existing Tailwind theme tokens (`src/index.css`) and shadcn components (`src/components/ui/`); color is reserved for meaning (speaker, pain type, missed-pain flag).
 
-The skill isn't in this repo, because it contains Apple's copyrighted guideline text. Install it once per machine:
-
-```bash
-git clone --depth 1 https://github.com/dickwu/apple-design-skill /tmp/apple-design-skill
-mkdir -p ~/.claude/skills/apple-design
-cp -R /tmp/apple-design-skill/SKILL.md /tmp/apple-design-skill/references ~/.claude/skills/apple-design/
-```
-
-Then start a new Claude Code session.
+The skill is in this repo at `.claude/skills/apple-design/` (from github.com/dickwu/apple-design-skill; the guideline text belongs to Apple Inc., see its `README.md`). After pulling it for the first time, start a new Claude Code session so it loads.
 
 ## Conventions
 
