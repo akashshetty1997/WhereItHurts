@@ -31,7 +31,7 @@ def test_follow_up() -> None:
 
 def test_whole_words_only() -> None:
     assert extract_keywords("I came back yesterday").regions == ["lower_back"]
-    assert extract_keywords("My kneecap feels fine").regions == []
+    assert extract_keywords("I was kneeling all day").regions == []
 
 
 @pytest.mark.parametrize(

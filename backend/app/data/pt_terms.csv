@@ -1,0 +1,85 @@
+# Physical therapy vocabulary: muscles, joints, spine areas and movements.
+# Used by the keyword fallback (term -> body region) and, from A2, by the Claude extraction prompt.
+#
+# term:          the correct spelling, as it should be written (matching ignores case). A trailing "s" (plural) also matches.
+# region:        one of the region ids in app/constants.py REGION_IDS; blank for movements.
+#                The MVP has one region per body part, so "hamstring" means left_leg and
+#                "deltoid" means right_shoulder until more regions exist. Plain words
+#                ("neck", "upper back", "cervical spine") are in constants.REGION_KEYWORDS.
+# also_heard_as: mishearings from speech-to-text, separated by |. Each one is rewritten to the
+#                term in corrected_text. Only real mishearings, never ordinary words.
+term,region,also_heard_as
+# --- Head ---
+temple,head,
+jaw,head,
+TMJ,head,t m j
+occipital,head,
+# --- Neck ---
+trapezius,neck,trapezoid|trapezious
+trap,neck,
+upper trap,neck,
+levator scapulae,neck,levator scapula|elevator scapula
+sternocleidomastoid,neck,sterno cleido mastoid
+scalene,neck,
+suboccipital,neck,sub occipital
+# --- Shoulder ---
+rotator cuff,right_shoulder,rotator cup|rotator cough
+supraspinatus,right_shoulder,super spinatus|supra spinatus
+infraspinatus,right_shoulder,infra spinatus
+subscapularis,right_shoulder,sub scapularis
+teres minor,right_shoulder,terrace minor
+deltoid,right_shoulder,delt toid
+delt,right_shoulder,
+acromion,right_shoulder,
+AC joint,right_shoulder,a c joint
+glenohumeral,right_shoulder,gleno humeral
+# --- Upper back ---
+scapula,upper_back,
+rhomboid,upper_back,rhombus
+mid trap,upper_back,
+lower trap,upper_back,
+latissimus dorsi,upper_back,
+lat,upper_back,
+# --- Lower back ---
+sacrum,lower_back,
+sacroiliac,lower_back,sacro iliac
+SI joint,lower_back,s i joint
+tailbone,lower_back,tail bone
+coccyx,lower_back,
+erector spinae,lower_back,erector spinal
+quadratus lumborum,lower_back,
+QL,lower_back,
+glute,lower_back,
+gluteus,lower_back,
+# --- Leg ---
+hamstring,left_leg,ham string
+quadriceps,left_leg,quadricep
+quad,left_leg,
+calf,left_leg,
+gastrocnemius,left_leg,
+soleus,left_leg,
+shin,left_leg,
+tibia,left_leg,
+IT band,left_leg,i t band
+iliotibial band,left_leg,ilio tibial band
+achilles,left_leg,
+ankle,left_leg,
+# --- Knee ---
+kneecap,left_knee,knee cap
+patella,left_knee,
+patellar tendon,left_knee,patella tendon
+ACL,left_knee,a c l
+MCL,left_knee,m c l
+meniscus,left_knee,
+# --- Movements (no region) ---
+flexion,,
+extension,,
+abduction,,
+adduction,,
+external rotation,,
+internal rotation,,
+lateral flexion,,
+range of motion,,
+dorsiflexion,,dorsi flexion
+plantar flexion,,planter flexion
+scapular retraction,,

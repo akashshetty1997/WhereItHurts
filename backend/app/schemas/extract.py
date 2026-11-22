@@ -26,6 +26,8 @@ class Extraction(BaseModel):
     path: list[str] = []
     # A follow-up the doctor proposed ("follow-up in two weeks"), else None.
     follow_up: str | None = None
+    # The sentence with PT terms corrected ("rotator cup" -> "rotator cuff"); None if unchanged.
+    corrected_text: str | None = None
 
 
 class ExtractResponse(Extraction):

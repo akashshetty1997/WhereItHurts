@@ -11,6 +11,7 @@ def test_extract_uses_keywords_without_an_api_key(client) -> None:
         "regions": ["lower_back", "left_leg"],
         "path": ["lower_back", "left_leg"],
         "follow_up": None,
+        "corrected_text": None,
         "source": "keywords",
     }
 

@@ -22,7 +22,9 @@ backend/app/
   schemas/         Pydantic request/response models, one file per feature
   services/        the logic
     extraction.py  sentence -> regions/path/follow_up: LLM (stub) then keyword fallback
-    keywords.py    keyword fallback
+    keywords.py    keyword fallback (corrects with the PT vocabulary first)
+    vocabulary.py  loads data/pt_terms.csv: correct(), region_phrases(), terms()
+  data/pt_terms.csv  PT vocabulary: term, region, common mishearings. Add words here, not in code.
     transcription/ audio.py (ffmpeg decode), engines.py (Parakeet/Whisper),
                    diarize.py (sentences + voice clustering), service.py (TranscriptionService)
 backend/tests/     pytest; conftest.py gives `client` with transcription off
@@ -53,9 +55,10 @@ backend/tests/     pytest; conftest.py gives `client` with transcription off
 | Method | Path | In | Out |
 |---|---|---|---|
 | GET | `/api/health` | – | `{status, transcription: "ok" \| "off"}` |
-| POST | `/api/extract` | `{text, speaker?: "doctor" \| "patient"}` | `{regions, path, follow_up, source: "llm" \| "keywords"}` |
+| POST | `/api/extract` | `{text, speaker?: "doctor" \| "patient"}` | `{regions, path, follow_up, corrected_text, source: "llm" \| "keywords"}` |
 | POST | `/api/transcribe` | multipart `audio`, `speakers?` (1–6, 2 for a visit), `hints?` (JSON list) | `{model, language, duration_ms, processing_ms, diarize_ms, speakers, lines[{start_ms, end_ms, speaker, text}]}` |
 
+- **PT vocabulary:** `app/data/pt_terms.csv` lists muscles, joints and movements, each with its region and common speech-to-text mishearings ("rotator cup" → "rotator cuff"). The keyword fallback corrects mishearings and maps terms to regions. `corrected_text` is the fixed sentence, or `null` when nothing changed. Show it alongside the original, never instead of it. The Claude prompt should include `vocabulary.terms()`. To add a word, add a CSV row (the region must be in `REGION_IDS`; mishearings must never be ordinary words), then run the tests.
 - **Extract:** the Claude call is a TODO in `services/extraction.py::_extract_with_llm`. Return `None` there on any failure and the keyword fallback answers. Use `constants.LLM_MODEL`, `LLM_TIMEOUT_S` and `LLM_MAX_TOKENS`. Before writing it, load the `claude-api` skill.
 - **Transcribe:** `"Speaker 1"` is whoever speaks first. The frontend maps speakers to doctor/patient. It returns 503 when the models aren't loaded.
 
