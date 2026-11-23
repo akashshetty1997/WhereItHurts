@@ -24,7 +24,7 @@ import { createAnatomy } from './anatomy'
 import { createMovementSim } from './movementSim'
 import { MOVEMENTS } from './movements'
 import MovementPanel from './MovementPanel'
-import { faceTexture, loadSavedPhoto } from './facePhoto'
+import { faceTexture, loadSavedPhoto, FACE_PHOTO_ENABLED } from './facePhoto'
 import AnatomyOverlay from './AnatomyOverlay'
 import { createPatientMaterial, patientUniforms } from '../shaders/patientMaterial'
 import {
@@ -499,10 +499,12 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
           labels.set(region, { label, el, text: '' })
         }
         setLoaded(true)
-        // A face photo kept from earlier (Use My Photo) goes back on.
-        loadSavedPhoto()
-          .then((photo) => photo && !disposed && setFace(photo))
-          .catch((error) => console.warn('Saved face photo not applied:', error))
+        // A face photo kept from earlier (Use My Photo) goes back on, while the feature is on.
+        if (FACE_PHOTO_ENABLED) {
+          loadSavedPhoto()
+            .then((photo) => photo && !disposed && setFace(photo))
+            .catch((error) => console.warn('Saved face photo not applied:', error))
+        }
       })
 
     // THREE.Timer replaces the deprecated Clock; connect() avoids a huge jump after a tab switch.

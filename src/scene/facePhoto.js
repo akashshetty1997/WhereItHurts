@@ -20,6 +20,10 @@ const SAVE_KEY = 'whereithurts.facePhoto'
 const MAX_PHOTO = 1280 // px, longest side, for finding and warping the face
 const SAVE_PHOTO = 720 // px, longest side, for the copy kept in this browser
 
+// Use My Photo is switched off for the demo (it isn't reliable yet): no button, and a photo saved
+// earlier isn't put back. Set to true to bring it back.
+export const FACE_PHOTO_ENABLED = false
+
 export class FacePhotoError extends Error {}
 
 let landmarker = null
