@@ -20,7 +20,10 @@ export default function MovementPanel({ region, sim, label, arc, onClose }) {
   const stop = (e) => e.stopPropagation()
 
   function markTo() {
-    const from = pendingFrom ?? arc?.from ?? 0
+    let from = pendingFrom ?? arc?.from ?? 0
+    // The neck: a range from the right side to the left would include facing forward. Keep it on the
+    // side being marked now, starting from facing forward.
+    if (movement.oneSided && Math.sign(from) * Math.sign(angle) < 0) from = 0
     visitStore.setPainArc(region, { from: Math.min(from, angle), to: Math.max(from, angle) })
     setPendingFrom(null)
   }
@@ -50,20 +53,20 @@ export default function MovementPanel({ region, sim, label, arc, onClose }) {
           </div>
           <div className="flex items-center gap-3">
             <Slider
-              value={[angle]}
+              value={[movement.mirrorSlider ? -angle : angle]}
               min={movement.min}
               max={movement.max}
               step={1}
-              onValueChange={([value]) => sim.setAngle(value)}
+              onValueChange={([value]) => sim.setAngle(movement.mirrorSlider ? -value : value)}
               aria-label={movement.sliderLabel}
               className="flex-1"
             />
             <Button
               variant="secondary"
               size="icon"
-              onClick={() => (playing ? sim.stop() : sim.play())}
-              aria-label={playing ? 'Pause' : 'Play the whole movement'}
-              title={playing ? 'Pause' : 'Play the whole movement'}
+              onClick={() => (playing ? sim.stop() : sim.play(null, 1, arc))}
+              aria-label={playing ? 'Pause' : arc ? 'Play the range where it hurts' : 'Play the whole movement'}
+              title={playing ? 'Pause' : arc ? 'Play the range where it hurts' : 'Play the whole movement'}
             >
               {playing ? <Pause /> : <Play />}
             </Button>
@@ -85,13 +88,22 @@ export default function MovementPanel({ region, sim, label, arc, onClose }) {
               </Button>
             </div>
             {arc && (
-              <button
-                type="button"
-                className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-                onClick={() => visitStore.setPainArc(region, null)}
-              >
-                Clear
-              </button>
+              <div className="flex gap-4 text-xs text-muted-foreground">
+                <button
+                  type="button"
+                  className="underline underline-offset-2 hover:text-foreground"
+                  onClick={() => sim.play()}
+                >
+                  Play Whole Movement
+                </button>
+                <button
+                  type="button"
+                  className="underline underline-offset-2 hover:text-foreground"
+                  onClick={() => visitStore.setPainArc(region, null)}
+                >
+                  Clear
+                </button>
+              </div>
             )}
           </div>
         </>
