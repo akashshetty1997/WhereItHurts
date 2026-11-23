@@ -3,7 +3,8 @@
 // patient said it hurts, with a marker at the current angle.
 import * as THREE from 'three'
 
-const SWEEP_SECONDS = 4 // rest → peak → rest
+const DEGREES_PER_SECOND = 90 // sweep speed (rest → overhead → rest takes about 4 s)
+const RANGE_SECONDS = 2 // playing the painful range takes at least this long, so it can be followed
 const ACTIVE = new THREE.Color('#ffb14a') // a working muscle glows warm
 const BAND_COLOR = new THREE.Color('#F78FB3') // the patient's color
 // The band's ring is drawn in its own XY plane, then turned into the body plane it belongs to.
@@ -22,7 +23,7 @@ export function createMovementSim(movement, entry, { reduceMotion = false } = {}
   const ringAngle = (t) => THREE.MathUtils.degToRad(bandSpec.ringAngle(t))
 
   let angle = rig.rest
-  let sweep = null // { t, from, peak, onEnd }
+  let sweep = null // { stops: [angles], leg, t, onEnd }: moves through the stops in order
   const listeners = new Set()
   let shown = null // last whole degree listeners saw
   const notify = () => listeners.forEach((l) => l())
@@ -81,16 +82,23 @@ export function createMovementSim(movement, entry, { reduceMotion = false } = {}
       apply()
     },
     // One sweep out to the peak and back to rest; direction -1 turns the other way (the neck).
+    // With `range` ({ from, to }, the band where it hurts) it plays just that part instead: it starts
+    // at `from` and moves to `to`, where it stops.
     // onEnd when it's done, not when stopped.
-    play(onEnd, direction = 1) {
-      const peak = THREE.MathUtils.clamp(movement.peak * direction, min, max)
+    play(onEnd, direction = 1, range = null) {
+      if (range) {
+        angle = range.from
+        apply()
+      }
+      const stops = range ? [range.to] : [THREE.MathUtils.clamp(movement.peak * direction, min, max), rig.rest]
       if (reduceMotion) {
-        angle = rig.rest
+        angle = stops.at(-1)
         apply()
         onEnd?.()
         return
       }
-      sweep = { t: 0, from: angle, peak, onEnd }
+      const speed = range ? Math.min(DEGREES_PER_SECOND, Math.abs(range.to - range.from) / RANGE_SECONDS) : DEGREES_PER_SECOND
+      sweep = { stops: [angle, ...stops].filter((a, i, all) => i === 0 || a !== all[i - 1]), leg: 0, t: 0, speed, onEnd }
       notify()
     },
     stop() {
@@ -100,13 +108,18 @@ export function createMovementSim(movement, entry, { reduceMotion = false } = {}
     // Called every frame. Returns true while the angle is inside the marked band.
     update(dt) {
       if (sweep) {
-        sweep.t = Math.min(1, sweep.t + dt / SWEEP_SECONDS)
-        const out = sweep.t < 0.5
-        const k = out ? sweep.t * 2 : (sweep.t - 0.5) * 2
+        // One leg at a time, each eased in and out, timed by how far it goes.
+        const from = sweep.stops[sweep.leg]
+        const to = sweep.stops[sweep.leg + 1]
+        sweep.t = to === undefined ? 1 : Math.min(1, sweep.t + (dt * sweep.speed) / Math.max(1, Math.abs(to - from)))
+        const k = sweep.t
         const ease = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2
-        angle = out ? THREE.MathUtils.lerp(sweep.from, sweep.peak, ease) : THREE.MathUtils.lerp(sweep.peak, rig.rest, ease)
+        if (to !== undefined) angle = THREE.MathUtils.lerp(from, to, ease)
         apply()
-        if (sweep.t === 1) {
+        if (sweep.t === 1 && sweep.leg + 2 < sweep.stops.length) {
+          sweep.leg++
+          sweep.t = 0
+        } else if (sweep.t === 1) {
           const done = sweep.onEnd
           sweep = null
           notify()

@@ -178,7 +178,11 @@ export const MOVEMENTS = {
     title: 'Turn Head',
     question: 'Which neck bones turn when you look over your shoulder?',
     rule: 'About half of a head turn happens between the top two neck bones (C1 and C2); the five below share the other half.',
-    sliderLabel: 'How far the head is turned: right is negative, left is positive, in degrees',
+    sliderLabel: 'How far the head is turned, in degrees: toward the left end turns it left',
+    // Seen from behind, the patient's left is on the left of the screen: the slider runs the same way.
+    mirrorSlider: true,
+    // Turning left and turning right are different movements: a marked range stays on one side.
+    oneSided: true,
     min: -80,
     max: 80,
     peak: 70,
