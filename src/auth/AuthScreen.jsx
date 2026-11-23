@@ -1,5 +1,5 @@
 // Log in / Register. Accounts live in the backend (POST /api/auth/register and /login).
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import ThemeMenu from './ThemeMenu'
 import { DEMO_GUEST, UNREACHABLE, PASSWORD_MIN_CHARS, ROLES, login, register } from './authApi'
 
@@ -10,6 +10,18 @@ const GENDERS = [
 ]
 
 export default function AuthScreen({ onLoggedIn, testMode, onTestModeChange }) {
+  // The public link has no server: offer Try the Demo right away instead of after a failed login.
+  const [serverDown, setServerDown] = useState(false)
+  useEffect(() => {
+    let live = true
+    fetch('/api/health')
+      .then((res) => res.ok && res.headers.get('content-type')?.includes('json'))
+      .catch(() => false)
+      .then((ok) => live && setServerDown(!ok))
+    return () => {
+      live = false
+    }
+  }, [])
   const [mode, setMode] = useState('login') // login | register
   const [fields, setFields] = useState({ name: '', email: '', password: '', role: 'patient', gender: '' })
   const [error, setError] = useState(null)
@@ -119,7 +131,7 @@ export default function AuthScreen({ onLoggedIn, testMode, onTestModeChange }) {
               : error}
           </p>
         )}
-        {error === UNREACHABLE && (
+        {(error === UNREACHABLE || serverDown) && (
           <button type="button" className="auth-submit auth-demo" onClick={() => onLoggedIn(DEMO_GUEST)}>
             Try the Demo
           </button>
