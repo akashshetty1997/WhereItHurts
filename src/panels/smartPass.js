@@ -27,6 +27,9 @@ export async function refineLine(segment, previousText) {
   if (current.rating == null && found.rating != null) patch.rating = found.rating
   if (!current.movement && found.movement) patch.movement = found.movement
   if (found.corrected_text && found.corrected_text !== current.text) patch.correctedText = found.corrected_text
+  // Anatomy structures the PT named or described: Auto-follow opens them (src/scene/autoFollow.js).
+  const newStructures = (found.structures ?? []).filter((id) => !(current.structures ?? []).includes(id))
+  if (newStructures.length) patch.structures = [...(current.structures ?? []), ...newStructures]
   if (Object.keys(patch).length) visitStore.updateSegment(segment.id, patch)
 
   const color = visitStore.get().speakers?.[segment.speaker]?.color

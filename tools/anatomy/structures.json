@@ -37,7 +37,11 @@
           "kind": "bone",
           "label": "Upper arm bone",
           "anatomical": "Humerus",
-          "sentence": "The bone of your upper arm. Its rounded top sits in the shoulder socket."
+          "sentence": "The bone of your upper arm. Its rounded top sits in the shoulder socket.",
+          "synonyms": [
+            "upper arm bone",
+            "arm bone"
+          ]
         },
         {
           "fma": "FMA13395",
@@ -51,7 +55,10 @@
           "kind": "bone",
           "label": "Collarbone",
           "anatomical": "Clavicle",
-          "sentence": "The bone across the top of your chest, from your breastbone to your shoulder."
+          "sentence": "The bone across the top of your chest, from your breastbone to your shoulder.",
+          "synonyms": [
+            "collar bone"
+          ]
         },
         {
           "fma": "FMA34680",
@@ -65,7 +72,11 @@
           "kind": "muscle",
           "label": "Side of the shoulder muscle",
           "anatomical": "Deltoid, side (acromial) part",
-          "sentence": "The middle part of the big rounded muscle on your shoulder. It lifts your arm out to the side."
+          "sentence": "The middle part of the big rounded muscle on your shoulder. It lifts your arm out to the side.",
+          "synonyms": [
+            "deltoid",
+            "shoulder muscle"
+          ]
         },
         {
           "fma": "FMA34684",
@@ -79,7 +90,11 @@
           "kind": "muscle",
           "label": "Top rotator cuff muscle",
           "anatomical": "Supraspinatus",
-          "sentence": "A rotator cuff muscle on top of the shoulder blade. It helps start lifting your arm."
+          "sentence": "A rotator cuff muscle on top of the shoulder blade. It helps start lifting your arm.",
+          "synonyms": [
+            "rotator cuff",
+            "rotator cuff muscles"
+          ]
         },
         {
           "fma": "FMA32547",
@@ -113,7 +128,10 @@
             "type": "closest",
             "a": "FMA13322",
             "b": "FMA13395"
-          }
+          },
+          "synonyms": [
+            "acromioclavicular"
+          ]
         },
         {
           "id": "right_glenohumeral_joint",
@@ -125,7 +143,12 @@
             "a": "FMA23130",
             "b": "FMA13395",
             "aTop": 0.15
-          }
+          },
+          "synonyms": [
+            "ball and socket",
+            "shoulder socket",
+            "glenohumeral"
+          ]
         }
       ],
       "landmarks": {
@@ -199,7 +222,11 @@
           "kind": "disc",
           "label": "Neck discs",
           "anatomical": "Cervical intervertebral discs",
-          "sentence": "Soft cushions between the neck bones that absorb shock and let your neck bend."
+          "sentence": "Soft cushions between the neck bones that absorb shock and let your neck bend.",
+          "synonyms": [
+            "disc in your neck",
+            "neck disc"
+          ]
         },
         {
           "fma": "FMA13407",
@@ -227,7 +254,11 @@
           "kind": "muscle",
           "label": "Upper trapezius",
           "anatomical": "Trapezius, upper (descending) part",
-          "sentence": "The top of the big flat muscle across your upper back. It shrugs your shoulders."
+          "sentence": "The top of the big flat muscle across your upper back. It shrugs your shoulders.",
+          "synonyms": [
+            "trapezius",
+            "traps"
+          ]
         }
       ],
       "joints": [
@@ -343,7 +374,11 @@
           "kind": "muscle",
           "label": "Shoulder blade squeezing muscle",
           "anatomical": "Rhomboid major",
-          "sentence": "Pulls your shoulder blades toward your spine."
+          "sentence": "Pulls your shoulder blades toward your spine.",
+          "synonyms": [
+            "rhomboids",
+            "rhomboid"
+          ]
         },
         {
           "fma": "FMA13380",
@@ -431,7 +466,10 @@
           "kind": "bone",
           "label": "Base of the spine",
           "anatomical": "Sacrum",
-          "sentence": "The triangle-shaped bone at the base of your spine, between your hip bones."
+          "sentence": "The triangle-shaped bone at the base of your spine, between your hip bones.",
+          "synonyms": [
+            "tailbone area"
+          ]
         },
         {
           "fma": "FMA16585",
@@ -445,7 +483,11 @@
           "kind": "disc",
           "label": "Lower back discs",
           "anatomical": "Lumbar intervertebral discs",
-          "sentence": "Thick cushions between the lower back bones that absorb shock when you move."
+          "sentence": "Thick cushions between the lower back bones that absorb shock when you move.",
+          "synonyms": [
+            "disc in your lower back",
+            "lower back disc"
+          ]
         },
         {
           "fma": "FMA22702",
@@ -484,14 +526,20 @@
           "kind": "bone",
           "label": "Thigh bone",
           "anatomical": "Femur",
-          "sentence": "The long bone of your thigh, the strongest bone in your body."
+          "sentence": "The long bone of your thigh, the strongest bone in your body.",
+          "synonyms": [
+            "thighbone"
+          ]
         },
         {
           "fma": "FMA24478",
           "kind": "bone",
           "label": "Shin bone",
           "anatomical": "Tibia",
-          "sentence": "The main bone of your lower leg. It carries your weight down to your ankle."
+          "sentence": "The main bone of your lower leg. It carries your weight down to your ankle.",
+          "synonyms": [
+            "shinbone"
+          ]
         },
         {
           "fma": "FMA24481",
@@ -505,14 +553,22 @@
           "kind": "bone",
           "label": "Kneecap",
           "anatomical": "Patella",
-          "sentence": "The small bone at the front of your knee. It helps your thigh muscle straighten your leg."
+          "sentence": "The small bone at the front of your knee. It helps your thigh muscle straighten your leg.",
+          "synonyms": [
+            "knee cap"
+          ]
         },
         {
           "fma": "FMA38929",
           "kind": "muscle",
           "label": "Front thigh muscle (middle)",
           "anatomical": "Rectus femoris (quadriceps)",
-          "sentence": "The middle front thigh muscle. It straightens your knee and lifts your leg."
+          "sentence": "The middle front thigh muscle. It straightens your knee and lifts your leg.",
+          "synonyms": [
+            "quadriceps",
+            "quads",
+            "quad"
+          ]
         },
         {
           "fma": "FMA38931",
@@ -533,7 +589,11 @@
           "kind": "muscle",
           "label": "Outer hamstring",
           "anatomical": "Biceps femoris, long head (hamstring)",
-          "sentence": "A back thigh muscle that bends your knee."
+          "sentence": "A back thigh muscle that bends your knee.",
+          "synonyms": [
+            "hamstring",
+            "hamstrings"
+          ]
         },
         {
           "fma": "FMA22359",
@@ -547,7 +607,11 @@
           "kind": "muscle",
           "label": "Inner calf muscle",
           "anatomical": "Gastrocnemius, medial head",
-          "sentence": "The inner part of your calf. It points your foot and helps bend your knee."
+          "sentence": "The inner part of your calf. It points your foot and helps bend your knee.",
+          "synonyms": [
+            "calf muscle",
+            "calf"
+          ]
         },
         {
           "fma": "FMA45961",
@@ -567,7 +631,10 @@
             "type": "closest",
             "a": "FMA24475",
             "b": "FMA24478"
-          }
+          },
+          "synonyms": [
+            "knee joint"
+          ]
         },
         {
           "id": "left_patellofemoral_joint",
@@ -597,14 +664,20 @@
           "kind": "bone",
           "label": "Thigh bone",
           "anatomical": "Femur",
-          "sentence": "The long bone of your thigh, the strongest bone in your body."
+          "sentence": "The long bone of your thigh, the strongest bone in your body.",
+          "synonyms": [
+            "thighbone"
+          ]
         },
         {
           "fma": "FMA24478",
           "kind": "bone",
           "label": "Shin bone",
           "anatomical": "Tibia",
-          "sentence": "The main bone of your lower leg. It carries your weight down to your ankle."
+          "sentence": "The main bone of your lower leg. It carries your weight down to your ankle.",
+          "synonyms": [
+            "shinbone"
+          ]
         },
         {
           "fma": "FMA24481",
@@ -618,14 +691,22 @@
           "kind": "bone",
           "label": "Kneecap",
           "anatomical": "Patella",
-          "sentence": "The small bone at the front of your knee. It helps your thigh muscle straighten your leg."
+          "sentence": "The small bone at the front of your knee. It helps your thigh muscle straighten your leg.",
+          "synonyms": [
+            "knee cap"
+          ]
         },
         {
           "fma": "FMA38929",
           "kind": "muscle",
           "label": "Front thigh muscle (middle)",
           "anatomical": "Rectus femoris (quadriceps)",
-          "sentence": "The middle front thigh muscle. It straightens your knee and lifts your leg."
+          "sentence": "The middle front thigh muscle. It straightens your knee and lifts your leg.",
+          "synonyms": [
+            "quadriceps",
+            "quads",
+            "quad"
+          ]
         },
         {
           "fma": "FMA38931",
@@ -646,7 +727,11 @@
           "kind": "muscle",
           "label": "Outer hamstring",
           "anatomical": "Biceps femoris, long head (hamstring)",
-          "sentence": "A back thigh muscle that bends your knee."
+          "sentence": "A back thigh muscle that bends your knee.",
+          "synonyms": [
+            "hamstring",
+            "hamstrings"
+          ]
         },
         {
           "fma": "FMA22359",
@@ -660,7 +745,11 @@
           "kind": "muscle",
           "label": "Inner calf muscle",
           "anatomical": "Gastrocnemius, medial head",
-          "sentence": "The inner part of your calf. It points your foot and helps bend your knee."
+          "sentence": "The inner part of your calf. It points your foot and helps bend your knee.",
+          "synonyms": [
+            "calf muscle",
+            "calf"
+          ]
         },
         {
           "fma": "FMA45961",
@@ -681,7 +770,11 @@
           "kind": "muscle",
           "label": "Buttock muscle",
           "anatomical": "Gluteus maximus",
-          "sentence": "The big muscle of your buttock. It straightens your hip when you stand up or climb."
+          "sentence": "The big muscle of your buttock. It straightens your hip when you stand up or climb.",
+          "synonyms": [
+            "glutes",
+            "glute"
+          ]
         },
         {
           "fma": "FMA22331",
@@ -713,7 +806,10 @@
             "type": "closest",
             "a": "FMA24475",
             "b": "FMA24478"
-          }
+          },
+          "synonyms": [
+            "knee joint"
+          ]
         }
       ]
     },
@@ -767,7 +863,11 @@
           "kind": "bone",
           "label": "Lower jaw",
           "anatomical": "Mandible",
-          "sentence": "Your lower jaw. It moves when you talk and chew."
+          "sentence": "Your lower jaw. It moves when you talk and chew.",
+          "synonyms": [
+            "jaw bone",
+            "jawbone"
+          ]
         },
         {
           "fma": "FMA32525",

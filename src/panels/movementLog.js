@@ -24,8 +24,9 @@ function nextId() {
 
 // Safety net when /api/extract returns no movement (its keyword fallback doesn't look for one):
 // a PT instruction like "Slowly turn your head to the left" → "Turn your head to the left".
+// "Look" only counts with a direction ("look over your right shoulder"), not "let's look at your neck".
 const MOVEMENT_RE =
-  /\b(turn|bend|lift|raise|reach|rotate|tilt|look|squat|step|stand|sit|walk|push|pull|straighten|extend|flex|lean|twist|shrug|kneel|lie)\b[^.?!]*/i
+  /\b(turn|bend|lift|raise|reach|rotate|tilt|look(?= (?:left|right|up|down|over|behind|back|to the))|squat|step|stand|sit|walk|push|pull|straighten|extend|flex|lean|twist|shrug|kneel|lie)\b[^.?!]*/i
 export function detectMovement(text) {
   const m = text.match(MOVEMENT_RE)
   if (!m) return null

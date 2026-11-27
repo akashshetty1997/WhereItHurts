@@ -147,6 +147,10 @@ RATING_LEAD_WORDS = ("about", "maybe", "around", "like", "probably", "roughly", 
 PT_TERMS_FILE = "pt_terms.csv"
 PT_TERMS_ALIAS_SEPARATOR = "|"
 
+# Show Anatomy structures and joints (id, region, label, anatomical name), written by
+# tools/anatomy/terms.mjs from tools/anatomy/structures.json. The smart pass may return their ids.
+ANATOMY_STRUCTURES_FILE = "anatomy_structures.json"
+
 # --- Accounts (demo login/register) --------------------------------------------------------
 
 USER_ROLES = ("patient", "pt")  # pt = the physical therapist
