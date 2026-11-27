@@ -4,15 +4,23 @@ belongs to, and common speech-to-text mishearings of them.
 - correct(text) rewrites known mishearings to the right term ("rotator cup" -> "rotator cuff").
 - region_phrases() gives every phrase that points at a region, for the keyword fallback.
 - terms() gives the whole list, for the Claude extraction prompt (A2).
+- structures() gives the Show Anatomy structures and joints, for Auto-follow (smart pass).
 """
 
 import csv
+import json
 import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-from app.constants import PT_TERMS_ALIAS_SEPARATOR, PT_TERMS_FILE, REGION_IDS, REGION_KEYWORDS
+from app.constants import (
+    ANATOMY_STRUCTURES_FILE,
+    PT_TERMS_ALIAS_SEPARATOR,
+    PT_TERMS_FILE,
+    REGION_IDS,
+    REGION_KEYWORDS,
+)
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
@@ -76,3 +84,26 @@ def region_phrases() -> dict[str, tuple[str, ...]]:
         if t.region and t.term.lower() not in phrases[t.region]:
             phrases[t.region].append(t.term.lower())
     return {region: tuple(words) for region, words in phrases.items()}
+
+
+@dataclass(frozen=True, slots=True)
+class Structure:
+    id: str
+    region: str
+    label: str
+    anatomical: str
+
+
+@lru_cache
+def structures() -> tuple[Structure, ...]:
+    """Show Anatomy structures and joints; the smart pass may name them (Auto-follow)."""
+    with (DATA_DIR / ANATOMY_STRUCTURES_FILE).open() as f:
+        parsed = tuple(Structure(**row) for row in json.load(f))
+    for s in parsed:
+        if s.region not in REGION_IDS:
+            raise ValueError(f"{ANATOMY_STRUCTURES_FILE}: unknown region {s.region!r} for {s.id}")
+    return parsed
+
+
+def structure_ids() -> frozenset[str]:
+    return frozenset(s.id for s in structures())

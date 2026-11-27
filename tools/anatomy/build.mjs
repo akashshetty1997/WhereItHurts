@@ -18,6 +18,7 @@ import { Document, NodeIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 import { meshopt, prune, dedup } from '@gltf-transform/functions'
 import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer'
+import { writeTerms } from './terms.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '../..')
@@ -314,3 +315,6 @@ if (failed) {
   console.log('some structures are missing (see above)')
   process.exitCode = 1
 }
+
+// The words a PT may say for each structure (Auto-follow): src/scene/anatomyTerms.json.
+writeTerms(config)

@@ -38,6 +38,11 @@ description of it. Otherwise null.
 they want to be able to do again or achieve. A short phrase in their words, starting with a verb or "No", \
 e.g. "Put plates on the top shelf", "No pain in day-to-day activities". Speech-to-text often mishears this \
 ("anthem role" means "end goal"). Otherwise null.
+- structures: only when the PT names or clearly describes one of these anatomy structures or joints \
+("the bone at the top of your arm" -> FMA23130, "where your collarbone meets your shoulder blade" -> \
+right_ac_joint), their ids, in the order said. Patient lines and plain body parts ("your shoulder") -> empty. \
+Ids (id: name / anatomical name, region):
+{structures}
 - corrected_text: if speech-to-text clearly misheard an anatomy or PT word ("bison" -> "bicep", \
 "rotator cup" -> "rotator cuff"), the sentence with only those words fixed. Otherwise null.
 
@@ -49,8 +54,14 @@ def system_prompt() -> str:
     terms = "\n".join(
         f"  {t.term} -> {t.region}" for t in vocabulary.terms() if t.region is not None
     )
+    structures = "\n".join(
+        f"  {s.id}: {s.label} / {s.anatomical}, {s.region}" for s in vocabulary.structures()
+    )
     return _SYSTEM.format(
-        regions=", ".join(REGION_IDS), terms=terms, pain_types=", ".join(PAIN_TYPES)
+        regions=", ".join(REGION_IDS),
+        terms=terms,
+        pain_types=", ".join(PAIN_TYPES),
+        structures=structures,
     )
 
 
@@ -83,6 +94,10 @@ def _schema_json() -> str:
             "follow_up": _nullable({"type": "string"}),
             "corrected_text": _nullable({"type": "string"}),
             "goal": _nullable({"type": "string"}),
+            "structures": {
+                "type": "array",
+                "items": {"type": "string", "enum": sorted(vocabulary.structure_ids())},
+            },
         },
         "required": [
             "regions",
@@ -93,6 +108,7 @@ def _schema_json() -> str:
             "follow_up",
             "corrected_text",
             "goal",
+            "structures",
         ],
         "additionalProperties": False,
     }
