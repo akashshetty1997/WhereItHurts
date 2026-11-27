@@ -9,7 +9,7 @@ import pytest
 from app.config import get_settings
 from app.services.llm import claude_code
 
-LINE_4 = "Sometimes it runs from my neck down into my shoulder."
+LINE_4 = "Sometimes it runs from my neck down into my right shoulder."
 
 
 def answer(**fields) -> dict:
@@ -69,6 +69,20 @@ def test_keyword_regions_are_kept_when_claude_misses_one(client, fake_claude) ->
     body = smart(client, LINE_4).json()
     assert body["regions"] == ["neck", "right_shoulder"]
     assert body["path"] == ["neck", "right_shoulder"]
+
+
+def test_unsided_from_keywords_and_claude_are_merged_and_never_regions(client, fake_claude) -> None:
+    fake_claude(answer(regions=["neck"], unsided=["left_leg", "right_shoulder"]))
+    body = smart(client, "My neck and my shoulder, and the calf too.").json()
+    assert body["regions"] == ["neck"]
+    assert body["unsided"] == ["right_shoulder", "left_leg"]
+
+
+def test_a_tapped_region_places_an_unsided_mention(client) -> None:
+    body = client.post(
+        "/api/extract", json={"text": "My shoulder aches", "region": "right_shoulder"}
+    ).json()
+    assert (body["regions"], body["unsided"]) == (["right_shoulder"], [])
 
 
 def test_misheard_words_are_corrected(client, fake_claude) -> None:

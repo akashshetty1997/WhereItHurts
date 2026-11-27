@@ -15,6 +15,7 @@ import { archiveVisit, getLastVisit, ownerIdOf } from './lib/history'
 import { buildBrief } from './lib/brief'
 import Brief from './panels/Brief'
 import PastVisits from './panels/PastVisits'
+import MovementOffer from './panels/MovementOffer'
 
 const NEXT_MODE = { paint: 'visit', visit: 'ended', ended: 'paint' }
 const MODES = Object.keys(NEXT_MODE)
@@ -70,6 +71,7 @@ export default function App() {
   // During the visit, a movement the PT asks for ("Raise your right arm", "Turn your head to the
   // left", "Bend your knee") plays on the body, once per line (the smart pass may add the movement
   // to a line a few seconds later).
+  const [offer, setOffer] = useState(null) // a movement asked for with no side: { region, direction, text }
   const modeRef = useRef(mode)
   modeRef.current = mode
   useEffect(() => {
@@ -79,6 +81,8 @@ export default function App() {
       const asked = spokenMovement(segment)
       if (!asked) return
       played.add(segment.id)
+      // No side said ("raise your arm"): never guess, offer it instead (src/lib/sides.js).
+      if (!asked.sided) return setOffer({ ...asked, text: segment.text, id: segment.id })
       playMovement(asked.region, `PT asked: “${segment.text}”`, asked.direction)
     }
     const offNew = visitStore.onSegment(check)
@@ -156,6 +160,16 @@ export default function App() {
             mode={shownMode}
             canShowAnatomy={canShowAnatomy}
           />
+          {offer && shownMode === 'visit' && (
+            <MovementOffer
+              offer={offer}
+              onPlay={() => {
+                playMovement(offer.region, `PT asked: “${offer.text}”`, offer.direction)
+                setOffer(null)
+              }}
+              onDismiss={() => setOffer(null)}
+            />
+          )}
 
         </main>
         {briefOpen && brief ? (

@@ -90,7 +90,7 @@ def test_each_sentence_goes_to_the_closer_voice() -> None:
     live = enrolled()
     near_patient = np.array([0.2, 0.9, 0.1], dtype=np.float32)
     [event] = live.handle(
-        clip(say("It runs from my neck down into my shoulder.", near_patient, 0, 2.5))
+        clip(say("It runs from my neck down into my right shoulder.", near_patient, 0, 2.5))
     )
     segment = event["segment"]
     assert segment["speaker"] == "patient"

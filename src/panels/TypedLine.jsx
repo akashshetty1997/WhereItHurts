@@ -41,6 +41,7 @@ async function addVisitLine(text, speaker) {
     end: null,
     text,
     regions: found?.regions ?? [],
+    unsided: found?.unsided ?? [], // said with no side: the transcript asks which
     path: found?.path ?? [],
     rating: found?.rating ?? null,
     movement: found?.movement ?? null,

@@ -3,7 +3,10 @@
 //   "Raise your right arm for me"           → { region: 'right_shoulder', direction: 1 }
 //   "Slowly turn your head to the left"     → { region: 'neck', direction: 1 }   (left = +)
 //   "Look over your right shoulder"         → { region: 'neck', direction: -1 }
-//   "Bend your knee for me"                 → { region: 'left_knee', direction: 1 }
+//   "Bend your left knee for me"            → { region: 'left_knee', direction: 1 }
+// `sided`: the side was said ("right arm", "left knee"), or the movement has none (the neck).
+// With no side ("raise your arm", "bend your knee") the app never guesses: App.jsx offers a
+// one-tap "Play Reach Up (right arm)?" instead of playing it (docs/NEXT_PHASE_PLAN.md, A3).
 const RAISE = /\b(raise|lift|reach)\b/i
 const ARM = /\b(arms?|shoulders?|up|overhead)\b/i
 const NOT_ARM = /\b(legs?|knees?|foot|feet|head|chin|hips?|heels?|toes?)\b/i
@@ -14,9 +17,15 @@ export function spokenMovement(segment) {
   if (!segment || segment.speaker === 'patient') return null
   // "Over your head" is where the arm goes, not a movement of the head.
   const text = `${segment.movement ?? ''} ${segment.text ?? ''}`.replace(/\b(over|above) your head\b/gi, 'overhead')
-  if (TURN_HEAD.test(text)) return { region: 'neck', direction: /\bright\b/i.test(text) ? -1 : 1 }
+  if (TURN_HEAD.test(text)) return { region: 'neck', direction: /\bright\b/i.test(text) ? -1 : 1, sided: true }
   // Only the left knee has a simulation.
-  if (BEND_KNEE.test(text)) return /\bright knee\b/i.test(text) ? null : { region: 'left_knee', direction: 1 }
-  if (RAISE.test(text) && ARM.test(text) && !NOT_ARM.test(text)) return /\bleft (arm|shoulder)\b/i.test(text) ? null : { region: 'right_shoulder', direction: 1 }
+  if (BEND_KNEE.test(text)) {
+    if (/\bright knees?\b/i.test(text)) return null
+    return { region: 'left_knee', direction: 1, sided: /\bleft knees?\b/i.test(text) }
+  }
+  if (RAISE.test(text) && ARM.test(text) && !NOT_ARM.test(text)) {
+    if (/\bleft (arms?|shoulders?)\b/i.test(text)) return null
+    return { region: 'right_shoulder', direction: 1, sided: /\bright (arms?|shoulders?)\b/i.test(text) }
+  }
   return null
 }

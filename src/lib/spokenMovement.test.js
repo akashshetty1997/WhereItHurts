@@ -14,9 +14,9 @@ test('raising the arm plays Reach Up', () => {
 })
 
 test('turning the head plays Turn Head, left or right', () => {
-  assert.deepEqual(spokenMovement(pt('Let me check your neck. Slowly turn your head to the left.')), { region: 'neck', direction: 1 })
-  assert.deepEqual(spokenMovement(pt('Now turn your head to the right.')), { region: 'neck', direction: -1 })
-  assert.deepEqual(spokenMovement(pt('Look over your right shoulder for me.')), { region: 'neck', direction: -1 })
+  assert.deepEqual(spokenMovement(pt('Let me check your neck. Slowly turn your head to the left.')), { region: 'neck', direction: 1, sided: true })
+  assert.deepEqual(spokenMovement(pt('Now turn your head to the right.')), { region: 'neck', direction: -1, sided: true })
+  assert.deepEqual(spokenMovement(pt('Look over your right shoulder for me.')), { region: 'neck', direction: -1, sided: true })
 })
 
 test('bending the knee plays Bend Knee', () => {
@@ -32,4 +32,14 @@ test('other lines do not play anything', () => {
   assert.equal(region({ speaker: 'patient', text: 'It aches when I reach up to put plates away.' }), null)
   assert.equal(region({ speaker: 'patient', text: 'It hurts when I turn my head.' }), null)
   assert.equal(region(null), null)
+})
+
+test('a side is never guessed: only a said side (or the neck) plays by itself', () => {
+  const sided = (text) => spokenMovement(pt(text))?.sided
+  assert.equal(sided('Raise your right arm up for me, slowly.'), true)
+  assert.equal(sided('Raise your arm for me.'), false)
+  assert.equal(sided('Bend your left knee.'), true)
+  assert.equal(sided('Bend your knee as far as it goes.'), false)
+  assert.equal(sided('Slowly turn your head to the left.'), true)
+  assert.equal(region(pt('Raise your left arm.')), null)
 })

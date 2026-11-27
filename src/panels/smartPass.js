@@ -27,6 +27,10 @@ export async function refineLine(segment, previousText) {
   if (current.rating == null && found.rating != null) patch.rating = found.rating
   if (!current.movement && found.movement) patch.movement = found.movement
   if (found.corrected_text && found.corrected_text !== current.text) patch.correctedText = found.corrected_text
+  // Body parts said with no side (src/lib/sides.js): the transcript asks which side.
+  const placed = new Set([...current.regions, ...added])
+  const newUnsided = (found.unsided ?? []).filter((r) => !placed.has(r) && !(current.unsided ?? []).includes(r))
+  if (newUnsided.length) patch.unsided = [...(current.unsided ?? []), ...newUnsided]
   // Anatomy structures the PT named or described: Auto-follow opens them (src/scene/autoFollow.js).
   const newStructures = (found.structures ?? []).filter((id) => !(current.structures ?? []).includes(id))
   if (newStructures.length) patch.structures = [...(current.structures ?? []), ...newStructures]

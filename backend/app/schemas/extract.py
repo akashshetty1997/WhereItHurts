@@ -49,6 +49,9 @@ class Extraction(BaseModel):
     # Show Anatomy structures or joints the PT names or describes ("the bone at the top of your
     # arm" -> FMA23130), ids from app/data/anatomy_structures.json. Auto-follow opens them.
     structures: list[str] = []
+    # A body part that has two sides, named without one ("my shoulder"): the region id it would
+    # map to. Never put in `regions`; the app asks "Which side?" (docs/NEXT_PHASE_PLAN.md, A3).
+    unsided: list[str] = []
 
 
 class ExtractResponse(Extraction):

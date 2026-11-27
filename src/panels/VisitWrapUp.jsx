@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { useUser } from '@/auth/userContext'
 import { CORRECTION_BADGE, correctionState, describeVersion } from '@/lib/corrections'
 import ConfirmCheck from './ConfirmCheck'
+import { sideNotes } from '@/lib/sides'
 
 const lower = (region) => (region ? REGIONS[region].toLowerCase() : 'symptom')
 
@@ -104,6 +105,7 @@ export function PtSummary({ visit, missed }) {
         )}
         {reviewed.length > 0 && <p className="mt-1">Reviewed by PT: {reviewed.join(', ')}</p>}
       </Row>
+      {sideNotes(visit).length > 0 && <Row title="No side said">{sideNotes(visit).map((m) => m.label).join('; ')}</Row>}
       <Row title="Follow-ups">
         {visit.followUps.length ? visit.followUps.map((f) => f.text).join('; ') : 'None'}
       </Row>

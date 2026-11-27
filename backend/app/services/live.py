@@ -185,6 +185,7 @@ class LiveSession:
                 "text": text,
                 "regions": found.regions,
                 "path": found.path,
+                "unsided": found.unsided,
             },
             "extraction": found.model_dump(),
             "sure": sure,

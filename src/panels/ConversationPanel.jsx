@@ -14,6 +14,7 @@ import LiveSpeech from './LiveSpeech'
 import MovementCheck from './MovementCheck'
 import { ConfirmChecks, CoverageReview, PtSummary } from './VisitWrapUp'
 import { evidenceLines } from '@/lib/coverage'
+import SideChips from './SideChips'
 
 // Right panel: the conversation, what was said about a tapped region, and the end-of-visit check.
 export default function ConversationPanel({ visit, mode, selected, missed }) {
@@ -119,6 +120,7 @@ export default function ConversationPanel({ visit, mode, selected, missed }) {
                 </span>
                 <span className="text-base">{s.text}</span>
                 {s.typed && mode === 'visit' && <TagRegions segment={s} />}
+                <SideChips segment={s} editable={mode === 'visit' || mode === 'ended'} />
               </li>
             ))}
           </ol>

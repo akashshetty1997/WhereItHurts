@@ -1,5 +1,6 @@
 // What a prep sentence does, spoken (PrepListen) or typed (TypedLine): mark pain, set the goal.
 import { regionLabel } from '@/regions'
+import { partName } from '@/lib/sides'
 import { glow } from '@/scene/bodyApi'
 import { visitStore } from '../visitStore'
 
@@ -59,6 +60,11 @@ export function applyPrep(found, regions, text) {
       glow(region, color)
     })
     heardNow.push(regions.map(describe).join('; '))
+  }
+  // "My shoulder aches": never guess the side (src/lib/sides.js).
+  if (!regions.length && describesPain && found.unsided?.length) {
+    const part = partName(found.unsided[0])
+    heardNow.push(`Which ${part}? Say “right ${part}” or “left ${part}”, or tap it on the body first.`)
   }
   return heardNow.join(' · ')
 }
