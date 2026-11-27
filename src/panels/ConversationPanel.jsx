@@ -17,13 +17,13 @@ import { evidenceLines } from '@/lib/coverage'
 import SideChips from './SideChips'
 
 // Right panel: the conversation, what was said about a tapped region, and the end-of-visit check.
-export default function ConversationPanel({ visit, mode, selected, missed }) {
+export default function ConversationPanel({ visit, mode, selected, missed, className }) {
   const { user, testMode } = useUser()
   const canReview = user?.role === 'pt' || testMode
   const mentions = selected ? visit.segments.filter((s) => s.regions.includes(selected)) : []
 
   return (
-    <aside className="flex min-h-0 flex-col gap-5 overflow-y-auto border-l border-border p-5">
+    <aside className={cn('flex min-h-0 flex-col gap-5 overflow-y-auto border-l border-border p-5', className)}>
       {(mode === 'paint' || mode === 'visit') && <LiveSpeech mode={mode} />}
       {mode === 'visit' && <MovementCheck visit={visit} />}
 

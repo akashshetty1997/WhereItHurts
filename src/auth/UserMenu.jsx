@@ -11,7 +11,7 @@ export default function UserMenu() {
   return (
     <div className="flex items-center gap-2 border-l border-border pl-4 whitespace-nowrap">
       <span className="flex items-center gap-1.5 text-sm">
-        <span className="max-w-40 truncate" title={user.name}>
+        <span className="hidden max-w-40 truncate sm:inline" title={user.name}>
           {user.name}
         </span>
         <span className={cn('rounded-full px-2 py-0.5 text-sm', isPt ? 'bg-pt/15 text-pt' : 'bg-patient/15 text-patient')}>

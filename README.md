@@ -47,6 +47,7 @@ curl localhost:8000/api/health                # {"transcription":"ok","llm":"cla
 | `src/visitStore.js` | The visit state (kept in the browser across a refresh; **New Visit** starts a new one). Each visit has its own id, start / end dates and an optional patient key (initials or a nickname) |
 | `src/lib/brief.js`, `src/panels/Brief.jsx` | **Pre-Visit Brief** (PT and Testing mode, Mark Pain, when this patient has a past visit): missed pain, open corrections, goal, not-confirmed and movement checks, where moving hurt, anatomy shown, follow-ups, and today's marks vs last time. Describes, never interprets; every item turns the body to it |
 | `src/lib/history.js`, `src/panels/PastVisits.jsx` | **Past Visits** (PT and Testing mode): finished visits kept in this browser (50 per account), filtered by patient, opened read-only with their body marks and reports (dated the day of the visit). The only module that touches history storage, so a server can replace it |
+| `src/panels/PhoneTabs.jsx` | Phone and tablet: one panel at a time with a tab bar at the bottom (Body / Marks / Visit). Audit: [docs/UX_AUDIT.md](docs/UX_AUDIT.md) |
 | `src/auth/` | Demo accounts (patient / PT), Testing mode, Try the Demo, light / dark |
 | `backend/` | FastAPI: extraction (keywords + Claude), live listening, transcription, accounts. See [backend/README.md](backend/README.md) |
 

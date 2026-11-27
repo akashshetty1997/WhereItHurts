@@ -27,14 +27,14 @@ const COPY = {
 
 // Left sidebar: the goal, then every body part as one grouped list. The list is also the
 // keyboard way to select a part (accessibility.md › Mobility: offer alternatives to gestures).
-export default function IntakePanel({ visit, mode, missed, selected, onSelectRegion, patient, onPatientChange, canNamePatient }) {
+export default function IntakePanel({ visit, mode, missed, selected, onSelectRegion, patient, onPatientChange, canNamePatient, className }) {
   const copy = COPY[mode]
   const painted = new Map(visit.painted.map((p) => [p.region, p]))
   const missedSet = new Set(missed.map((p) => p.region))
   const missedStatus = new Map(missed.map((p) => [p.region, p.coverage]))
 
   return (
-    <aside className="flex min-h-0 flex-col gap-5 border-r border-border p-5">
+    <aside className={cn('flex min-h-0 flex-col gap-5 border-r border-border p-5', className)}>
       <div className="space-y-1.5">
         <h2 className="text-xl font-bold">{copy.title}</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">{copy.hint}</p>
