@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { CircleAlert, CircleCheck, FileText, Printer, Target } from 'lucide-react'
+import { CircleAlert, CircleCheck, FileText, Printer, Tag, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { snapshot } from '@/scene/bodyApi'
+import { glow, snapshot } from '@/scene/bodyApi'
 import { useUser } from '@/auth/userContext'
 import Report from './Report'
-import { goalDiscussed } from '@/visitStore'
+import { goalDiscussed, visitStore } from '@/visitStore'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { regionLabel, REGIONS } from '@/regions'
 import { toTen } from '@/scene/intensity'
@@ -95,8 +95,10 @@ export default function ConversationPanel({ visit, mode, selected, missed }) {
               <li key={s.id} className="leading-snug">
                 <span className={cn('block text-sm font-bold', SPEAKER_TEXT[s.speaker])}>
                   {SPEAKER_NAMES[s.speaker] ?? s.speaker}
+                  {s.typed && <span className="font-normal text-muted-foreground"> · typed</span>}
                 </span>
                 <span className="text-base">{s.text}</span>
+                {s.typed && mode === 'visit' && <TagRegions segment={s} />}
               </li>
             ))}
           </ol>
@@ -131,5 +133,54 @@ function ReportButtons({ visit, missed }) {
         <Report kind={report.kind} visit={visit} missed={missed} maps={report.maps} user={user} onDone={() => setReport(null)} />
       )}
     </section>
+  )
+}
+
+// A typed line the server couldn't read (or read wrong): tap the body parts it's about. Same as
+// the smart pass adding a region: the line updates and the part glows.
+function TagRegions({ segment }) {
+  const [open, setOpen] = useState(false)
+  const toggle = (region) => {
+    const has = segment.regions.includes(region)
+    visitStore.updateSegment(segment.id, {
+      regions: has ? segment.regions.filter((r) => r !== region) : [...segment.regions, region],
+    })
+    if (!has) glow(region, visitStore.get().speakers?.[segment.speaker === 'patient' ? 'patient' : 'doctor']?.color)
+  }
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-1 flex items-center gap-1 text-sm font-bold text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+      >
+        <Tag className="size-3.5" aria-hidden />
+        {segment.regions.length ? segment.regions.map((r) => REGIONS[r]).join(', ') : 'Tag Body Part'}
+      </button>
+    )
+  }
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1" role="group" aria-label="Body parts this line is about">
+      {Object.keys(REGIONS).map((region) => {
+        const on = segment.regions.includes(region)
+        return (
+          <button
+            key={region}
+            type="button"
+            aria-pressed={on}
+            onClick={() => toggle(region)}
+            className={cn(
+              'rounded-full px-2.5 py-1 text-sm font-bold ring-1 focus-visible:outline-2 focus-visible:outline-ring',
+              on ? 'bg-primary text-primary-foreground ring-primary' : 'ring-border hover:bg-secondary',
+            )}
+          >
+            {REGIONS[region]}
+          </button>
+        )
+      })}
+      <button type="button" onClick={() => setOpen(false)} className="px-2 text-sm font-bold text-muted-foreground hover:text-foreground">
+        Done
+      </button>
+    </div>
   )
 }

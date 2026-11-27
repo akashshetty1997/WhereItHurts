@@ -13,6 +13,7 @@ Hackathon app (Sundai Hack 150): before a physical therapy (PT) visit the patien
 | Frontend (Vite + React + Three.js) | repo root: `src/`, `vite.config.js` |
 | Visit state (saved in the browser; New Visit clears it) | `src/visitStore.js` (shape: `src/mockVisit.js`) |
 | Voice: Record Your Prep, Record the Visit, smart pass | `src/panels/PrepListen.jsx`, `LiveListen.jsx`, `liveVoice.js`, `smartPass.js`; backend `/api/live`, `/api/extract(/smart)` |
+| Typed input (mic or server down) | `src/panels/TypedLine.jsx`, `prepLine.js`; tagging in `ConversationPanel.jsx` (`TagRegions`) |
 | Movement check, summary | `src/panels/movementLog.js`, `MovementCheck.jsx`, `VisitWrapUp.jsx` |
 | Show Anatomy (reference bones and muscles, per-body fit) | `src/scene/anatomy.js`, `AnatomyOverlay.jsx`, `patientRegions.js` (`anatomy`); asset build `tools/anatomy/` |
 | Region ids (keep in sync with `backend/app/constants.py`) | `src/regions.js` |

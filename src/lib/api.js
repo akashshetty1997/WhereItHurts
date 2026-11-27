@@ -23,8 +23,9 @@ async function post(path, body, timeoutMs) {
 export const EXTRACT_TIMEOUT_MS = 2500
 export const SMART_TIMEOUT_MS = 20000 // Claude Code takes ~3–6 s; give it room
 
-export function extract(text, speaker) {
-  return post('/api/extract', { text, speaker }, EXTRACT_TIMEOUT_MS)
+/** `region`: during prep, the body part the patient tapped (a sentence naming none describes it). */
+export function extract(text, speaker, region = null) {
+  return post('/api/extract', { text, speaker, ...(region ? { region } : {}) }, EXTRACT_TIMEOUT_MS)
 }
 
 /** `context`: the line said just before (so "About a five." can be read), or an intake hint. */

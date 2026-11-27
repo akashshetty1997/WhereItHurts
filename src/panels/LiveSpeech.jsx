@@ -7,12 +7,23 @@ import { RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import LiveListen from './LiveListen'
 import PrepListen from './PrepListen'
+import TypedLine from './TypedLine'
 
 export default function LiveSpeech({ mode = 'visit' }) {
   const [failure, setFailure] = useState(null)
   const [attempt, setAttempt] = useState(0) // remounts the recorder on "Try Again"
   const prep = mode === 'paint'
 
+  // Typing works whether or not the mic and the server do (src/panels/TypedLine.jsx).
+  return (
+    <div className="space-y-3">
+      <Recorder failure={failure} setFailure={setFailure} attempt={attempt} setAttempt={setAttempt} prep={prep} />
+      <TypedLine mode={mode} />
+    </div>
+  )
+}
+
+function Recorder({ failure, setFailure, attempt, setAttempt, prep }) {
   if (failure) {
     return (
       <div className="space-y-2 rounded-xl bg-destructive/10 p-3 ring-1 ring-destructive/50">
