@@ -1,4 +1,4 @@
-import { FilePlus, History, Play, Square, RotateCcw, X } from 'lucide-react'
+import { ClipboardList, FilePlus, History, Play, Square, RotateCcw, X } from 'lucide-react'
 import { formatVisitDate } from '@/lib/visitDisplay'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -22,7 +22,7 @@ const ACTIONS = {
 const NEW_VISIT_QUESTION = 'Start a new visit? This clears the marks, goal, conversation and summary.'
 
 // Toolbar: app name, the three visit steps in order (current one lit), the next action, account.
-export default function AppHeader({ mode, onAction, onNewVisit, onPastVisits, viewing, onClosePast }) {
+export default function AppHeader({ mode, onAction, onNewVisit, onPastVisits, onBrief, briefOpen, viewing, onClosePast }) {
   const current = STEPS.findIndex((s) => s.mode === mode)
   const action = ACTIONS[mode]
   const Icon = action.icon
@@ -84,6 +84,12 @@ export default function AppHeader({ mode, onAction, onNewVisit, onPastVisits, vi
             >
               <FilePlus className="size-4" aria-hidden />
               New Visit
+            </Button>
+          )}
+          {onBrief && mode === 'paint' && (
+            <Button variant="secondary" className="h-10 gap-2 font-bold" onClick={onBrief} aria-pressed={briefOpen}>
+              <ClipboardList className="size-4" aria-hidden />
+              Brief
             </Button>
           )}
           {onPastVisits && (

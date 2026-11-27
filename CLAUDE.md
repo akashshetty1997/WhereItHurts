@@ -12,6 +12,7 @@ Hackathon app (Sundai Hack 150): before a physical therapy (PT) visit the patien
 | UI design rules (any change to how the frontend looks) | the `apple-design` skill (personal install, see below) |
 | Frontend (Vite + React + Three.js) | repo root: `src/`, `vite.config.js` |
 | Visit state (saved in the browser; New Visit starts a new one) | `src/visitStore.js` (shape: `src/mockVisit.js`) |
+| Pre-Visit Brief (from the last visit + today's prep) | `src/lib/brief.js` (data, tested), `src/panels/Brief.jsx` |
 | Past Visits (history in the browser; swap for server storage later) | `src/lib/history.js` (only place that touches it), `src/panels/PastVisits.jsx` |
 | Voice: Record Your Prep, Record the Visit, smart pass | `src/panels/PrepListen.jsx`, `LiveListen.jsx`, `liveVoice.js`, `smartPass.js`; backend `/api/live`, `/api/extract(/smart)` |
 | Movement check, summary | `src/panels/movementLog.js`, `MovementCheck.jsx`, `VisitWrapUp.jsx` |
