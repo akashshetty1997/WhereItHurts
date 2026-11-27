@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { snapshot } from '@/scene/bodyApi'
 import { useUser } from '@/auth/userContext'
 import Report from './Report'
-import { goalDiscussed } from '@/visitStore'
+import { goalDiscussed, visitStore } from '@/visitStore'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { regionLabel, REGIONS } from '@/regions'
 import { toTen } from '@/scene/intensity'
@@ -36,7 +36,11 @@ export default function ConversationPanel({ visit, mode, selected, missed }) {
               <Target className={cn('mt-0.5 size-5 shrink-0', goalDiscussed(visit) ? 'text-clear' : 'text-flag')} aria-hidden />
               <span>
                 Your goal, “{visit.goal.text}”,{' '}
-                {goalDiscussed(visit) ? 'came up in the visit.' : 'didn’t come up. Ask about it before you leave.'}
+                {goalDiscussed(visit)
+                  ? 'came up in the visit.'
+                  : visitStore.isViewingPast()
+                    ? 'didn’t come up.'
+                    : 'didn’t come up. Ask about it before you leave.'}
               </span>
             </p>
           )}

@@ -22,7 +22,9 @@ export function ConfirmChecks({ visit }) {
             During <b>{o.movement ? `“${o.movement}”` : 'the movement'}</b>, you said your {lower(o.symptomRegion)} went from{' '}
             <b>{o.before}/10</b> to <b>{o.after}/10</b>. Does that match what you felt?
           </p>
-          {o.confirmed == null ? (
+          {o.confirmed == null && visitStore.isViewingPast() ? (
+            <p className="text-sm font-bold text-muted-foreground">Not confirmed.</p>
+          ) : o.confirmed == null ? (
             <div className="grid grid-cols-2 gap-2">
               <Button className="gap-2 font-bold" onClick={() => visitStore.updateObservation(o.id, { confirmed: true })}>
                 <Check className="size-4" aria-hidden /> That’s Right
