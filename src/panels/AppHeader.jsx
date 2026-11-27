@@ -93,9 +93,10 @@ export default function AppHeader({ mode, onAction, onNewVisit, onPastVisits, on
             </Button>
           )}
           {onPastVisits && (
-            <Button variant="ghost" className="h-10 gap-2" onClick={onPastVisits}>
+            <Button variant="ghost" className="h-10 gap-2" onClick={onPastVisits} title="Past Visits">
               <History className="size-4" aria-hidden />
-              Past Visits
+              {/* Narrow windows: icon only (the label stays for screen readers), so the header fits. */}
+              <span className="sr-only 2xl:not-sr-only">Past Visits</span>
             </Button>
           )}
           <UserMenu />
