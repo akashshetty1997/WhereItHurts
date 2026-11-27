@@ -38,7 +38,8 @@ curl localhost:8000/api/health                # {"transcription":"ok","llm":"cla
 | `src/scene/anatomy.js`, `AnatomyOverlay.jsx` | **Show Anatomy** (PT or Testing mode): reference bones, muscles and joints inside a selected region, see-through skin, Explain to Patient, Add to Report |
 | `src/scene/movements.js`, `movementSim.js`, `MovementPanel.jsx`, `src/lib/spokenMovement.js` | **Movement simulations** (everyone): **Reach Up** (right shoulder), **Turn Head** (neck), **Bend Knee** (left knee). Slider or Play, one rule each, working muscles glow orange, mark the range where it hurts; each plays by itself when the PT asks for it during the visit ("raise your arm", "turn your head to the left", "bend your knee") |
 | `tools/anatomy/` | Builds `public/models/anatomy.glb` from BodyParts3D (`structures.json` lists each region's structures; `node tools/anatomy/build.mjs`) |
-| `src/panels/VisitWrapUp.jsx` | Summary: confirm cards, PT summary |
+| `src/panels/VisitWrapUp.jsx` | Summary: confirm cards, **Review What Came Up** (PT), PT summary |
+| `src/lib/coverage.js` | Did each marked pain and the goal come up? Never came up / Asked, but the patient didn't answer / The patient talked about it / Reviewed by PT, with the sentences behind each |
 | `src/visitStore.js` | The visit state (kept in the browser across a refresh; **New Visit** clears it) |
 | `src/auth/` | Demo accounts (patient / PT), Testing mode, Try the Demo, light / dark |
 | `backend/` | FastAPI: extraction (keywords + Claude), live listening, transcription, accounts. See [backend/README.md](backend/README.md) |

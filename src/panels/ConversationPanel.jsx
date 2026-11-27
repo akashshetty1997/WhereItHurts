@@ -12,10 +12,13 @@ import { SPEAKER_NAMES, SPEAKER_TEXT } from '@/lib/visitDisplay'
 import { cn } from '@/lib/utils'
 import LiveSpeech from './LiveSpeech'
 import MovementCheck from './MovementCheck'
-import { ConfirmChecks, PtSummary } from './VisitWrapUp'
+import { ConfirmChecks, CoverageReview, PtSummary } from './VisitWrapUp'
+import { evidenceLines } from '@/lib/coverage'
 
 // Right panel: the conversation, what was said about a tapped region, and the end-of-visit check.
 export default function ConversationPanel({ visit, mode, selected, missed }) {
+  const { user, testMode } = useUser()
+  const canReview = user?.role === 'pt' || testMode
   const mentions = selected ? visit.segments.filter((s) => s.regions.includes(selected)) : []
 
   return (
@@ -51,7 +54,19 @@ export default function ConversationPanel({ visit, mode, selected, missed }) {
                 <CircleAlert className="mt-0.5 size-5 shrink-0 text-flag" aria-hidden />
                 <span>
                   You marked your <b className="text-flag">{REGIONS[p.region].toLowerCase()}</b> ({p.type},{' '}
-                  {toTen(p.intensity)}/10), but nobody talked about it.
+                  {toTen(p.intensity)}/10),{' '}
+                  {p.coverage === 'pt_asked' ? (
+                    <>
+                      and the PT asked about it, but it didn’t get an answer.
+                      {evidenceLines(visit, p.evidence)[0] && (
+                        <span className="mt-1 block text-sm text-muted-foreground">
+                          PT: “{evidenceLines(visit, p.evidence)[0].text}”
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    'but nobody talked about it.'
+                  )}
                 </span>
               </p>
             ))
@@ -60,6 +75,7 @@ export default function ConversationPanel({ visit, mode, selected, missed }) {
       )}
 
       {mode === 'ended' && <ConfirmChecks visit={visit} />}
+      {mode === 'ended' && canReview && <CoverageReview visit={visit} />}
       {mode === 'ended' && <ReportButtons visit={visit} missed={missed} />}
       {mode === 'ended' && <PtSummary visit={visit} missed={missed} />}
 
