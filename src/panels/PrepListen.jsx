@@ -8,55 +8,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { Mic, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { regionLabel } from '@/regions'
-import { glow, onRegionClick } from '@/scene/bodyApi'
-import { visitStore } from '../visitStore'
+import { onRegionClick } from '@/scene/bodyApi'
 import { startLive } from './liveVoice'
-
-const DEFAULT_TYPE = 'aching' // same defaults as the tap-and-pick card (src/scene/IntakePicker.jsx)
-const DEFAULT_RATING = 5
+import { applyPrep, askClaude, unplaced } from './prepLine'
 
 const FAILURES = {
   transcription_off: 'Hands-free listening is off on the server.',
   closed: 'Can’t reach the WhereItHurts server. Live listening runs on the demo laptop (see README).',
   mic: 'The microphone is blocked or missing. Allow it in the address bar.',
-}
-
-// One body part, merged into what was already marked (like the tap-and-pick card does).
-function markPain(region, { type, rating, note }) {
-  const painted = visitStore.get().painted
-  const entry = painted.find((p) => p.region === region)
-  const next = {
-    region,
-    type: entry?.type ?? DEFAULT_TYPE,
-    intensity: entry?.intensity ?? DEFAULT_RATING,
-    ...entry,
-    note,
-    ...(type ? { type } : {}),
-    ...(rating != null ? { intensity: rating } : {}), // already 0–10
-  }
-  visitStore.setPainted([...painted.filter((p) => p.region !== region), next])
-}
-
-// Same wording as backend/app/constants.py PREP_CONTEXT: tells Claude this is the intake.
-const PREP_CONTEXT =
-  'Before the visit: the patient describes where it hurts or what they want to be able to do again.'
-
-async function askClaude(text) {
-  const res = await fetch('/api/extract/smart', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ text, speaker: 'patient', context: PREP_CONTEXT }),
-  })
-  if (!res.ok) throw new Error(`smart extract ${res.status}`)
-  return res.json()
-}
-
-const unplaced = (text) => `“${text}” Which body part? Name it, or tap it on the body first.`
-
-function describe(region) {
-  const entry = visitStore.get().painted.find((p) => p.region === region)
-  return `${regionLabel(region)} · ${entry.type} · ${entry.intensity}/10`
 }
 
 export default function PrepListen({ onFail }) {
@@ -66,37 +25,17 @@ export default function PrepListen({ onFail }) {
   const live = useRef(null)
   const session = useRef(0) // ignores events from a recording that was already stopped
 
-  // Use what was understood: the goal, and/or the body parts it describes. Returns what to show.
-  function apply(found, regions, text) {
-    const heardNow = []
-    if (found.goal) {
-      visitStore.setGoal(found.goal)
-      heardNow.push(`Goal: ${found.goal}`)
-    }
-    // A goal sentence only marks a body part when it also says how it hurts.
-    const describesPain = !found.goal || found.pain_type || found.rating != null
-    if (regions.length && describesPain) {
-      const color = visitStore.get().speakers?.patient?.color ?? '#F78FB3'
-      regions.forEach((region) => {
-        markPain(region, { type: found.pain_type, rating: found.rating, note: text })
-        glow(region, color)
-      })
-      heardNow.push(regions.map(describe).join('; '))
-    }
-    return heardNow.join(' · ')
-  }
-
   function handle(event) {
     if (event.type === 'ready') setPhase('recording')
     else if (event.type === 'error') onFail(FAILURES[event.code] ?? `Listening error: ${event.code}`)
     else if (event.type === 'segment') {
       const { text, regions } = event.segment
-      const understood = apply(event.extraction ?? {}, regions, text)
+      const understood = applyPrep(event.extraction ?? {}, regions, text)
       if (understood) return setHeard(understood)
       // Keywords couldn't place it (free phrasing, a misheard word): Claude reads it (~3 s).
       setHeard(`“${text}” Checking…`)
       askClaude(text)
-        .then((found) => setHeard(apply(found, found.regions ?? [], text) || unplaced(text)))
+        .then((found) => setHeard(applyPrep(found, found.regions ?? [], text) || unplaced(text)))
         .catch(() => setHeard(unplaced(text)))
     }
   }
