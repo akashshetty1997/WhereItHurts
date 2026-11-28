@@ -11,7 +11,9 @@ import { visitStore, useVisit, unmentioned, loadSession, saveSession } from './v
 import { onLine, onLineUpdate, resetMovementCheck } from './panels/movementLog'
 import { useUser } from './auth/userContext'
 import { PATIENTS, DEFAULT_PATIENT } from './scene/patientRegions'
-import { archiveVisit, ownerIdOf } from './lib/history'
+import { archiveVisit, getLastVisit, ownerIdOf } from './lib/history'
+import { buildBrief } from './lib/brief'
+import Brief from './panels/Brief'
 import PastVisits from './panels/PastVisits'
 
 const NEXT_MODE = { paint: 'visit', visit: 'ended', ended: 'paint' }
@@ -50,6 +52,17 @@ export default function App() {
     setViewing(null)
   }
   const shownMode = viewing ? 'ended' : mode
+  // Pre-Visit Brief (PT and Testing mode, Mark Pain): this patient's last visit (or the last one
+  // at all when no patient is named), compared with today's prep.
+  const [briefOpen, setBriefOpen] = useState(false)
+  const lastVisit =
+    canSwitchBody && !viewing && mode === 'paint'
+      ? getLastVisit(ownerId, { patientKey: visit.patientKey?.trim() || undefined, before: visit.visitId })
+      : null
+  const brief = lastVisit ? buildBrief(lastVisit, visit) : null
+  useEffect(() => {
+    if (mode !== 'paint') setBriefOpen(false)
+  }, [mode])
   // Every conversation line feeds the movement check (PT names a movement, patient rates it), and
   // so does what Claude adds to a line afterwards (src/panels/smartPass.js).
   useEffect(() => visitStore.onSegment(onLine), [])
@@ -117,6 +130,8 @@ export default function App() {
         onAction={() => setMode(NEXT_MODE[mode])}
         onNewVisit={newVisit}
         onPastVisits={canSwitchBody ? () => setPastOpen(true) : null}
+        onBrief={brief ? () => setBriefOpen((open) => !open) : null}
+        briefOpen={briefOpen}
         viewing={viewing}
         onClosePast={closePast}
       />
@@ -141,8 +156,13 @@ export default function App() {
             mode={shownMode}
             canShowAnatomy={canShowAnatomy}
           />
+
         </main>
-        <ConversationPanel visit={visit} mode={shownMode} selected={selected} missed={missed} />
+        {briefOpen && brief ? (
+          <Brief brief={brief} patientKey={visit.patientKey?.trim() || null} onClose={() => setBriefOpen(false)} />
+        ) : (
+          <ConversationPanel visit={visit} mode={shownMode} selected={selected} missed={missed} />
+        )}
       </div>
     </div>
   )
