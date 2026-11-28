@@ -1,0 +1,1166 @@
+[
+ {
+  "id": "FMA23130",
+  "region": "right_shoulder",
+  "kind": "bone",
+  "label": "Upper arm bone",
+  "anatomical": "Humerus",
+  "terms": [
+   "upper arm bone",
+   "humerus",
+   "arm bone"
+  ]
+ },
+ {
+  "id": "FMA13395",
+  "region": "right_shoulder",
+  "kind": "bone",
+  "label": "Shoulder blade",
+  "anatomical": "Scapula",
+  "terms": [
+   "shoulder blade",
+   "scapula"
+  ]
+ },
+ {
+  "id": "FMA13322",
+  "region": "right_shoulder",
+  "kind": "bone",
+  "label": "Collarbone",
+  "anatomical": "Clavicle",
+  "terms": [
+   "collarbone",
+   "clavicle",
+   "collar bone"
+  ]
+ },
+ {
+  "id": "FMA34680",
+  "region": "right_shoulder",
+  "kind": "muscle",
+  "label": "Front of the shoulder muscle",
+  "anatomical": "Deltoid, front (clavicular) part",
+  "terms": [
+   "front of the shoulder muscle",
+   "deltoid, front (clavicular) part",
+   "clavicular",
+   "deltoid"
+  ]
+ },
+ {
+  "id": "FMA34682",
+  "region": "right_shoulder",
+  "kind": "muscle",
+  "label": "Side of the shoulder muscle",
+  "anatomical": "Deltoid, side (acromial) part",
+  "terms": [
+   "side of the shoulder muscle",
+   "deltoid, side (acromial) part",
+   "acromial",
+   "deltoid",
+   "shoulder muscle"
+  ]
+ },
+ {
+  "id": "FMA34684",
+  "region": "right_shoulder",
+  "kind": "muscle",
+  "label": "Back of the shoulder muscle",
+  "anatomical": "Deltoid, back (spinal) part",
+  "terms": [
+   "back of the shoulder muscle",
+   "deltoid, back (spinal) part",
+   "spinal",
+   "deltoid"
+  ]
+ },
+ {
+  "id": "FMA32544",
+  "region": "right_shoulder",
+  "kind": "muscle",
+  "label": "Top rotator cuff muscle",
+  "anatomical": "Supraspinatus",
+  "terms": [
+   "top rotator cuff muscle",
+   "supraspinatus",
+   "rotator cuff",
+   "rotator cuff muscles"
+  ]
+ },
+ {
+  "id": "FMA32547",
+  "region": "right_shoulder",
+  "kind": "muscle",
+  "label": "Back rotator cuff muscle",
+  "anatomical": "Infraspinatus",
+  "terms": [
+   "back rotator cuff muscle",
+   "infraspinatus"
+  ]
+ },
+ {
+  "id": "FMA32553",
+  "region": "right_shoulder",
+  "kind": "muscle",
+  "label": "Small back rotator cuff muscle",
+  "anatomical": "Teres minor",
+  "terms": [
+   "small back rotator cuff muscle",
+   "teres minor"
+  ]
+ },
+ {
+  "id": "FMA13414",
+  "region": "right_shoulder",
+  "kind": "muscle",
+  "label": "Front rotator cuff muscle",
+  "anatomical": "Subscapularis",
+  "terms": [
+   "front rotator cuff muscle",
+   "subscapularis"
+  ]
+ },
+ {
+  "id": "right_ac_joint",
+  "region": "right_shoulder",
+  "kind": "joint",
+  "label": "AC joint",
+  "anatomical": "Acromioclavicular joint",
+  "terms": [
+   "ac joint",
+   "acromioclavicular joint",
+   "acromioclavicular"
+  ]
+ },
+ {
+  "id": "right_glenohumeral_joint",
+  "region": "right_shoulder",
+  "kind": "joint",
+  "label": "Shoulder joint",
+  "anatomical": "Glenohumeral joint (ball and socket)",
+  "terms": [
+   "shoulder joint",
+   "glenohumeral joint (ball and socket)",
+   "ball and socket",
+   "glenohumeral joint",
+   "shoulder socket",
+   "glenohumeral"
+  ]
+ },
+ {
+  "id": "FMA12519",
+  "region": "neck",
+  "kind": "bone",
+  "label": "Top neck bone (C1)",
+  "anatomical": "Atlas (C1 vertebra)",
+  "terms": [
+   "top neck bone (c1)",
+   "c1",
+   "top neck bone",
+   "atlas (c1 vertebra)",
+   "c1 vertebra",
+   "atlas"
+  ]
+ },
+ {
+  "id": "FMA12520",
+  "region": "neck",
+  "kind": "bone",
+  "label": "Second neck bone (C2)",
+  "anatomical": "Axis (C2 vertebra)",
+  "terms": [
+   "second neck bone (c2)",
+   "c2",
+   "second neck bone",
+   "axis (c2 vertebra)",
+   "c2 vertebra",
+   "axis"
+  ]
+ },
+ {
+  "id": "FMA12521",
+  "region": "neck",
+  "kind": "bone",
+  "label": "Neck bone C3",
+  "anatomical": "Third cervical vertebra",
+  "terms": [
+   "neck bone c3",
+   "third cervical vertebra"
+  ]
+ },
+ {
+  "id": "FMA12522",
+  "region": "neck",
+  "kind": "bone",
+  "label": "Neck bone C4",
+  "anatomical": "Fourth cervical vertebra",
+  "terms": [
+   "neck bone c4",
+   "fourth cervical vertebra"
+  ]
+ },
+ {
+  "id": "FMA12523",
+  "region": "neck",
+  "kind": "bone",
+  "label": "Neck bone C5",
+  "anatomical": "Fifth cervical vertebra",
+  "terms": [
+   "neck bone c5",
+   "fifth cervical vertebra"
+  ]
+ },
+ {
+  "id": "FMA12524",
+  "region": "neck",
+  "kind": "bone",
+  "label": "Neck bone C6",
+  "anatomical": "Sixth cervical vertebra",
+  "terms": [
+   "neck bone c6",
+   "sixth cervical vertebra"
+  ]
+ },
+ {
+  "id": "FMA12525",
+  "region": "neck",
+  "kind": "bone",
+  "label": "Neck bone C7",
+  "anatomical": "Seventh cervical vertebra",
+  "terms": [
+   "neck bone c7",
+   "seventh cervical vertebra"
+  ]
+ },
+ {
+  "id": "FMA13895",
+  "region": "neck",
+  "kind": "disc",
+  "label": "Neck discs",
+  "anatomical": "Cervical intervertebral discs",
+  "terms": [
+   "neck discs",
+   "cervical intervertebral discs",
+   "disc in your neck",
+   "neck disc"
+  ]
+ },
+ {
+  "id": "FMA13407",
+  "region": "neck",
+  "kind": "muscle",
+  "label": "Side neck muscle",
+  "anatomical": "Sternocleidomastoid",
+  "terms": [
+   "side neck muscle",
+   "sternocleidomastoid"
+  ]
+ },
+ {
+  "id": "FMA22653",
+  "region": "neck",
+  "kind": "muscle",
+  "label": "Back of the neck muscle",
+  "anatomical": "Splenius capitis",
+  "terms": [
+   "back of the neck muscle",
+   "splenius capitis"
+  ]
+ },
+ {
+  "id": "FMA32519",
+  "region": "neck",
+  "kind": "muscle",
+  "label": "Shoulder lifting muscle",
+  "anatomical": "Levator scapulae",
+  "terms": [
+   "shoulder lifting muscle",
+   "levator scapulae"
+  ]
+ },
+ {
+  "id": "FMA32557",
+  "region": "neck",
+  "kind": "muscle",
+  "label": "Upper trapezius",
+  "anatomical": "Trapezius, upper (descending) part",
+  "terms": [
+   "upper trapezius",
+   "trapezius, upper (descending) part",
+   "descending",
+   "trapezius",
+   "traps"
+  ]
+ },
+ {
+  "id": "c4_c5_joint",
+  "region": "neck",
+  "kind": "joint",
+  "label": "Neck joint (C4–C5)",
+  "anatomical": "Joints between the C4 and C5 vertebrae",
+  "terms": [
+   "neck joint (c4-c5)",
+   "c4-c5",
+   "neck joint",
+   "joints between the c4 and c5 vertebrae"
+  ]
+ },
+ {
+  "id": "FMA9165",
+  "region": "upper_back",
+  "kind": "bone",
+  "label": "Upper back bone T1",
+  "anatomical": "First thoracic vertebra",
+  "terms": [
+   "upper back bone t1",
+   "first thoracic vertebra"
+  ]
+ },
+ {
+  "id": "FMA9187",
+  "region": "upper_back",
+  "kind": "bone",
+  "label": "Upper back bone T2",
+  "anatomical": "Second thoracic vertebra",
+  "terms": [
+   "upper back bone t2",
+   "second thoracic vertebra"
+  ]
+ },
+ {
+  "id": "FMA9209",
+  "region": "upper_back",
+  "kind": "bone",
+  "label": "Upper back bone T3",
+  "anatomical": "Third thoracic vertebra",
+  "terms": [
+   "upper back bone t3",
+   "third thoracic vertebra"
+  ]
+ },
+ {
+  "id": "FMA9248",
+  "region": "upper_back",
+  "kind": "bone",
+  "label": "Upper back bone T4",
+  "anatomical": "Fourth thoracic vertebra",
+  "terms": [
+   "upper back bone t4",
+   "fourth thoracic vertebra"
+  ]
+ },
+ {
+  "id": "FMA9922",
+  "region": "upper_back",
+  "kind": "bone",
+  "label": "Upper back bone T5",
+  "anatomical": "Fifth thoracic vertebra",
+  "terms": [
+   "upper back bone t5",
+   "fifth thoracic vertebra"
+  ]
+ },
+ {
+  "id": "FMA9945",
+  "region": "upper_back",
+  "kind": "bone",
+  "label": "Upper back bone T6",
+  "anatomical": "Sixth thoracic vertebra",
+  "terms": [
+   "upper back bone t6",
+   "sixth thoracic vertebra"
+  ]
+ },
+ {
+  "id": "FMA9968",
+  "region": "upper_back",
+  "kind": "bone",
+  "label": "Upper back bone T7",
+  "anatomical": "Seventh thoracic vertebra",
+  "terms": [
+   "upper back bone t7",
+   "seventh thoracic vertebra"
+  ]
+ },
+ {
+  "id": "FMA9991",
+  "region": "upper_back",
+  "kind": "bone",
+  "label": "Upper back bone T8",
+  "anatomical": "Eighth thoracic vertebra",
+  "terms": [
+   "upper back bone t8",
+   "eighth thoracic vertebra"
+  ]
+ },
+ {
+  "id": "FMA10014",
+  "region": "upper_back",
+  "kind": "bone",
+  "label": "Upper back bone T9",
+  "anatomical": "Ninth thoracic vertebra",
+  "terms": [
+   "upper back bone t9",
+   "ninth thoracic vertebra"
+  ]
+ },
+ {
+  "id": "FMA10037",
+  "region": "upper_back",
+  "kind": "bone",
+  "label": "Upper back bone T10",
+  "anatomical": "Tenth thoracic vertebra",
+  "terms": [
+   "upper back bone t10",
+   "tenth thoracic vertebra"
+  ]
+ },
+ {
+  "id": "FMA10059",
+  "region": "upper_back",
+  "kind": "bone",
+  "label": "Upper back bone T11",
+  "anatomical": "Eleventh thoracic vertebra",
+  "terms": [
+   "upper back bone t11",
+   "eleventh thoracic vertebra"
+  ]
+ },
+ {
+  "id": "FMA10081",
+  "region": "upper_back",
+  "kind": "bone",
+  "label": "Upper back bone T12",
+  "anatomical": "Twelfth thoracic vertebra",
+  "terms": [
+   "upper back bone t12",
+   "twelfth thoracic vertebra"
+  ]
+ },
+ {
+  "id": "FMA10455",
+  "region": "upper_back",
+  "kind": "disc",
+  "label": "Upper back discs",
+  "anatomical": "Thoracic intervertebral discs",
+  "terms": [
+   "upper back discs",
+   "thoracic intervertebral discs"
+  ]
+ },
+ {
+  "id": "FMA13379",
+  "region": "upper_back",
+  "kind": "muscle",
+  "label": "Shoulder blade squeezing muscle",
+  "anatomical": "Rhomboid major",
+  "terms": [
+   "shoulder blade squeezing muscle",
+   "rhomboid major",
+   "rhomboids",
+   "rhomboid"
+  ]
+ },
+ {
+  "id": "FMA13380",
+  "region": "upper_back",
+  "kind": "muscle",
+  "label": "Small shoulder blade muscle",
+  "anatomical": "Rhomboid minor",
+  "terms": [
+   "small shoulder blade muscle",
+   "rhomboid minor"
+  ]
+ },
+ {
+  "id": "FMA32556",
+  "region": "upper_back",
+  "kind": "muscle",
+  "label": "Middle trapezius",
+  "anatomical": "Trapezius, middle (transverse) part",
+  "terms": [
+   "middle trapezius",
+   "trapezius, middle (transverse) part",
+   "transverse",
+   "trapezius"
+  ]
+ },
+ {
+  "id": "FMA32555",
+  "region": "upper_back",
+  "kind": "muscle",
+  "label": "Lower trapezius",
+  "anatomical": "Trapezius, lower (ascending) part",
+  "terms": [
+   "lower trapezius",
+   "trapezius, lower (ascending) part",
+   "ascending",
+   "trapezius"
+  ]
+ },
+ {
+  "id": "FMA22709",
+  "region": "upper_back",
+  "kind": "muscle",
+  "label": "Long back muscle",
+  "anatomical": "Longissimus thoracis",
+  "terms": [
+   "long back muscle",
+   "longissimus thoracis"
+  ]
+ },
+ {
+  "id": "t6_t7_joint",
+  "region": "upper_back",
+  "kind": "joint",
+  "label": "Upper back joint (T6–T7)",
+  "anatomical": "Joints between the T6 and T7 vertebrae",
+  "terms": [
+   "upper back joint (t6-t7)",
+   "t6-t7",
+   "upper back joint",
+   "joints between the t6 and t7 vertebrae"
+  ]
+ },
+ {
+  "id": "FMA13072",
+  "region": "lower_back",
+  "kind": "bone",
+  "label": "Lower back bone L1",
+  "anatomical": "First lumbar vertebra",
+  "terms": [
+   "lower back bone l1",
+   "first lumbar vertebra"
+  ]
+ },
+ {
+  "id": "FMA13073",
+  "region": "lower_back",
+  "kind": "bone",
+  "label": "Lower back bone L2",
+  "anatomical": "Second lumbar vertebra",
+  "terms": [
+   "lower back bone l2",
+   "second lumbar vertebra"
+  ]
+ },
+ {
+  "id": "FMA13074",
+  "region": "lower_back",
+  "kind": "bone",
+  "label": "Lower back bone L3",
+  "anatomical": "Third lumbar vertebra",
+  "terms": [
+   "lower back bone l3",
+   "third lumbar vertebra"
+  ]
+ },
+ {
+  "id": "FMA13075",
+  "region": "lower_back",
+  "kind": "bone",
+  "label": "Lower back bone L4",
+  "anatomical": "Fourth lumbar vertebra",
+  "terms": [
+   "lower back bone l4",
+   "fourth lumbar vertebra"
+  ]
+ },
+ {
+  "id": "FMA13076",
+  "region": "lower_back",
+  "kind": "bone",
+  "label": "Lower back bone L5",
+  "anatomical": "Fifth lumbar vertebra",
+  "terms": [
+   "lower back bone l5",
+   "fifth lumbar vertebra"
+  ]
+ },
+ {
+  "id": "FMA16202",
+  "region": "lower_back",
+  "kind": "bone",
+  "label": "Base of the spine",
+  "anatomical": "Sacrum",
+  "terms": [
+   "base of the spine",
+   "sacrum",
+   "tailbone area"
+  ]
+ },
+ {
+  "id": "FMA16585",
+  "region": "lower_back",
+  "kind": "bone",
+  "label": "Hip bones",
+  "anatomical": "Hip bones (pelvis)",
+  "terms": [
+   "hip bones",
+   "hip bones (pelvis)",
+   "pelvis"
+  ]
+ },
+ {
+  "id": "FMA13894",
+  "region": "lower_back",
+  "kind": "disc",
+  "label": "Lower back discs",
+  "anatomical": "Lumbar intervertebral discs",
+  "terms": [
+   "lower back discs",
+   "lumbar intervertebral discs",
+   "disc in your lower back",
+   "lower back disc"
+  ]
+ },
+ {
+  "id": "FMA22702",
+  "region": "lower_back",
+  "kind": "muscle",
+  "label": "Lower back muscle",
+  "anatomical": "Iliocostalis lumborum",
+  "terms": [
+   "lower back muscle",
+   "iliocostalis lumborum"
+  ]
+ },
+ {
+  "id": "FMA18060",
+  "region": "lower_back",
+  "kind": "muscle",
+  "label": "Deep hip flexor",
+  "anatomical": "Psoas major",
+  "terms": [
+   "deep hip flexor",
+   "psoas major"
+  ]
+ },
+ {
+  "id": "l4_l5_joint",
+  "region": "lower_back",
+  "kind": "joint",
+  "label": "Lower back joint (L4–L5)",
+  "anatomical": "Joints between the L4 and L5 vertebrae",
+  "terms": [
+   "lower back joint (l4-l5)",
+   "l4-l5",
+   "lower back joint",
+   "joints between the l4 and l5 vertebrae"
+  ]
+ },
+ {
+  "id": "FMA24475",
+  "region": "left_knee",
+  "kind": "bone",
+  "label": "Thigh bone",
+  "anatomical": "Femur",
+  "terms": [
+   "thigh bone",
+   "femur",
+   "thighbone"
+  ]
+ },
+ {
+  "id": "FMA24478",
+  "region": "left_knee",
+  "kind": "bone",
+  "label": "Shin bone",
+  "anatomical": "Tibia",
+  "terms": [
+   "shin bone",
+   "tibia",
+   "shinbone"
+  ]
+ },
+ {
+  "id": "FMA24481",
+  "region": "left_knee",
+  "kind": "bone",
+  "label": "Thin lower leg bone",
+  "anatomical": "Fibula",
+  "terms": [
+   "thin lower leg bone",
+   "fibula"
+  ]
+ },
+ {
+  "id": "FMA24487",
+  "region": "left_knee",
+  "kind": "bone",
+  "label": "Kneecap",
+  "anatomical": "Patella",
+  "terms": [
+   "kneecap",
+   "patella",
+   "knee cap"
+  ]
+ },
+ {
+  "id": "FMA38929",
+  "region": "left_knee",
+  "kind": "muscle",
+  "label": "Front thigh muscle (middle)",
+  "anatomical": "Rectus femoris (quadriceps)",
+  "terms": [
+   "front thigh muscle (middle)",
+   "middle",
+   "front thigh muscle",
+   "rectus femoris (quadriceps)",
+   "quadriceps",
+   "rectus femoris",
+   "quads",
+   "quad"
+  ]
+ },
+ {
+  "id": "FMA38931",
+  "region": "left_knee",
+  "kind": "muscle",
+  "label": "Outer thigh muscle",
+  "anatomical": "Vastus lateralis (quadriceps)",
+  "terms": [
+   "outer thigh muscle",
+   "vastus lateralis (quadriceps)",
+   "quadriceps",
+   "vastus lateralis"
+  ]
+ },
+ {
+  "id": "FMA38933",
+  "region": "left_knee",
+  "kind": "muscle",
+  "label": "Inner thigh muscle above the knee",
+  "anatomical": "Vastus medialis (quadriceps)",
+  "terms": [
+   "inner thigh muscle above the knee",
+   "vastus medialis (quadriceps)",
+   "quadriceps",
+   "vastus medialis"
+  ]
+ },
+ {
+  "id": "FMA45889",
+  "region": "left_knee",
+  "kind": "muscle",
+  "label": "Outer hamstring",
+  "anatomical": "Biceps femoris, long head (hamstring)",
+  "terms": [
+   "outer hamstring",
+   "biceps femoris, long head (hamstring)",
+   "hamstring",
+   "biceps femoris",
+   "hamstrings"
+  ]
+ },
+ {
+  "id": "FMA22359",
+  "region": "left_knee",
+  "kind": "muscle",
+  "label": "Inner hamstring",
+  "anatomical": "Semitendinosus (hamstring)",
+  "terms": [
+   "inner hamstring",
+   "semitendinosus (hamstring)",
+   "hamstring",
+   "semitendinosus"
+  ]
+ },
+ {
+  "id": "FMA45958",
+  "region": "left_knee",
+  "kind": "muscle",
+  "label": "Inner calf muscle",
+  "anatomical": "Gastrocnemius, medial head",
+  "terms": [
+   "inner calf muscle",
+   "gastrocnemius, medial head",
+   "gastrocnemius",
+   "calf muscle",
+   "calf"
+  ]
+ },
+ {
+  "id": "FMA45961",
+  "region": "left_knee",
+  "kind": "muscle",
+  "label": "Outer calf muscle",
+  "anatomical": "Gastrocnemius, lateral head",
+  "terms": [
+   "outer calf muscle",
+   "gastrocnemius, lateral head",
+   "gastrocnemius"
+  ]
+ },
+ {
+  "id": "left_knee_joint",
+  "region": "left_knee",
+  "kind": "joint",
+  "label": "Knee joint",
+  "anatomical": "Tibiofemoral joint",
+  "terms": [
+   "knee joint",
+   "tibiofemoral joint"
+  ]
+ },
+ {
+  "id": "left_patellofemoral_joint",
+  "region": "left_knee",
+  "kind": "joint",
+  "label": "Kneecap joint",
+  "anatomical": "Patellofemoral joint",
+  "terms": [
+   "kneecap joint",
+   "patellofemoral joint"
+  ]
+ },
+ {
+  "id": "FMA16587",
+  "region": "left_leg",
+  "kind": "bone",
+  "label": "Hip bone",
+  "anatomical": "Left hip bone (pelvis)",
+  "terms": [
+   "hip bone",
+   "left hip bone (pelvis)",
+   "pelvis",
+   "left hip bone"
+  ]
+ },
+ {
+  "id": "FMA24475",
+  "region": "left_leg",
+  "kind": "bone",
+  "label": "Thigh bone",
+  "anatomical": "Femur",
+  "terms": [
+   "thigh bone",
+   "femur",
+   "thighbone"
+  ]
+ },
+ {
+  "id": "FMA24478",
+  "region": "left_leg",
+  "kind": "bone",
+  "label": "Shin bone",
+  "anatomical": "Tibia",
+  "terms": [
+   "shin bone",
+   "tibia",
+   "shinbone"
+  ]
+ },
+ {
+  "id": "FMA24481",
+  "region": "left_leg",
+  "kind": "bone",
+  "label": "Thin lower leg bone",
+  "anatomical": "Fibula",
+  "terms": [
+   "thin lower leg bone",
+   "fibula"
+  ]
+ },
+ {
+  "id": "FMA24487",
+  "region": "left_leg",
+  "kind": "bone",
+  "label": "Kneecap",
+  "anatomical": "Patella",
+  "terms": [
+   "kneecap",
+   "patella",
+   "knee cap"
+  ]
+ },
+ {
+  "id": "FMA38929",
+  "region": "left_leg",
+  "kind": "muscle",
+  "label": "Front thigh muscle (middle)",
+  "anatomical": "Rectus femoris (quadriceps)",
+  "terms": [
+   "front thigh muscle (middle)",
+   "middle",
+   "front thigh muscle",
+   "rectus femoris (quadriceps)",
+   "quadriceps",
+   "rectus femoris",
+   "quads",
+   "quad"
+  ]
+ },
+ {
+  "id": "FMA38931",
+  "region": "left_leg",
+  "kind": "muscle",
+  "label": "Outer thigh muscle",
+  "anatomical": "Vastus lateralis (quadriceps)",
+  "terms": [
+   "outer thigh muscle",
+   "vastus lateralis (quadriceps)",
+   "quadriceps",
+   "vastus lateralis"
+  ]
+ },
+ {
+  "id": "FMA38933",
+  "region": "left_leg",
+  "kind": "muscle",
+  "label": "Inner thigh muscle above the knee",
+  "anatomical": "Vastus medialis (quadriceps)",
+  "terms": [
+   "inner thigh muscle above the knee",
+   "vastus medialis (quadriceps)",
+   "quadriceps",
+   "vastus medialis"
+  ]
+ },
+ {
+  "id": "FMA45889",
+  "region": "left_leg",
+  "kind": "muscle",
+  "label": "Outer hamstring",
+  "anatomical": "Biceps femoris, long head (hamstring)",
+  "terms": [
+   "outer hamstring",
+   "biceps femoris, long head (hamstring)",
+   "hamstring",
+   "biceps femoris",
+   "hamstrings"
+  ]
+ },
+ {
+  "id": "FMA22359",
+  "region": "left_leg",
+  "kind": "muscle",
+  "label": "Inner hamstring",
+  "anatomical": "Semitendinosus (hamstring)",
+  "terms": [
+   "inner hamstring",
+   "semitendinosus (hamstring)",
+   "hamstring",
+   "semitendinosus"
+  ]
+ },
+ {
+  "id": "FMA45958",
+  "region": "left_leg",
+  "kind": "muscle",
+  "label": "Inner calf muscle",
+  "anatomical": "Gastrocnemius, medial head",
+  "terms": [
+   "inner calf muscle",
+   "gastrocnemius, medial head",
+   "gastrocnemius",
+   "calf muscle",
+   "calf"
+  ]
+ },
+ {
+  "id": "FMA45961",
+  "region": "left_leg",
+  "kind": "muscle",
+  "label": "Outer calf muscle",
+  "anatomical": "Gastrocnemius, lateral head",
+  "terms": [
+   "outer calf muscle",
+   "gastrocnemius, lateral head",
+   "gastrocnemius"
+  ]
+ },
+ {
+  "id": "FMA22559",
+  "region": "left_leg",
+  "kind": "muscle",
+  "label": "Deep calf muscle",
+  "anatomical": "Soleus",
+  "terms": [
+   "deep calf muscle",
+   "soleus"
+  ]
+ },
+ {
+  "id": "FMA22329",
+  "region": "left_leg",
+  "kind": "muscle",
+  "label": "Buttock muscle",
+  "anatomical": "Gluteus maximus",
+  "terms": [
+   "buttock muscle",
+   "gluteus maximus",
+   "glutes",
+   "glute"
+  ]
+ },
+ {
+  "id": "FMA22331",
+  "region": "left_leg",
+  "kind": "muscle",
+  "label": "Side hip muscle",
+  "anatomical": "Gluteus medius",
+  "terms": [
+   "side hip muscle",
+   "gluteus medius"
+  ]
+ },
+ {
+  "id": "left_hip_joint",
+  "region": "left_leg",
+  "kind": "joint",
+  "label": "Hip joint",
+  "anatomical": "Hip joint (ball and socket)",
+  "terms": [
+   "hip joint",
+   "hip joint (ball and socket)",
+   "ball and socket"
+  ]
+ },
+ {
+  "id": "left_knee_joint",
+  "region": "left_leg",
+  "kind": "joint",
+  "label": "Knee joint",
+  "anatomical": "Tibiofemoral joint",
+  "terms": [
+   "knee joint",
+   "tibiofemoral joint"
+  ]
+ },
+ {
+  "id": "FMA52734",
+  "region": "head",
+  "kind": "bone",
+  "label": "Forehead bone",
+  "anatomical": "Frontal bone",
+  "terms": [
+   "forehead bone",
+   "frontal bone"
+  ]
+ },
+ {
+  "id": "FMA9613",
+  "region": "head",
+  "kind": "bone",
+  "label": "Top of the skull",
+  "anatomical": "Parietal bones",
+  "terms": [
+   "top of the skull",
+   "parietal bones"
+  ]
+ },
+ {
+  "id": "FMA52735",
+  "region": "head",
+  "kind": "bone",
+  "label": "Back of the skull",
+  "anatomical": "Occipital bone",
+  "terms": [
+   "back of the skull",
+   "occipital bone"
+  ]
+ },
+ {
+  "id": "FMA52737",
+  "region": "head",
+  "kind": "bone",
+  "label": "Side of the skull",
+  "anatomical": "Temporal bones",
+  "terms": [
+   "side of the skull",
+   "temporal bones"
+  ]
+ },
+ {
+  "id": "FMA52736",
+  "region": "head",
+  "kind": "bone",
+  "label": "Middle of the skull base",
+  "anatomical": "Sphenoid bone",
+  "terms": [
+   "middle of the skull base",
+   "sphenoid bone"
+  ]
+ },
+ {
+  "id": "FMA9711",
+  "region": "head",
+  "kind": "bone",
+  "label": "Upper jaw",
+  "anatomical": "Maxilla",
+  "terms": [
+   "upper jaw",
+   "maxilla"
+  ]
+ },
+ {
+  "id": "FMA52748",
+  "region": "head",
+  "kind": "bone",
+  "label": "Lower jaw",
+  "anatomical": "Mandible",
+  "terms": [
+   "lower jaw",
+   "mandible",
+   "jaw bone",
+   "jawbone"
+  ]
+ },
+ {
+  "id": "FMA32525",
+  "region": "head",
+  "kind": "muscle",
+  "label": "Large base-of-skull muscle",
+  "anatomical": "Rectus capitis posterior major",
+  "terms": [
+   "large base-of-skull muscle",
+   "rectus capitis posterior major"
+  ]
+ },
+ {
+  "id": "FMA32526",
+  "region": "head",
+  "kind": "muscle",
+  "label": "Small base-of-skull muscle",
+  "anatomical": "Rectus capitis posterior minor",
+  "terms": [
+   "small base-of-skull muscle",
+   "rectus capitis posterior minor"
+  ]
+ },
+ {
+  "id": "FMA32527",
+  "region": "head",
+  "kind": "muscle",
+  "label": "Upper slanted skull muscle",
+  "anatomical": "Obliquus capitis superior",
+  "terms": [
+   "upper slanted skull muscle",
+   "obliquus capitis superior"
+  ]
+ },
+ {
+  "id": "FMA32528",
+  "region": "head",
+  "kind": "muscle",
+  "label": "Lower slanted neck muscle",
+  "anatomical": "Obliquus capitis inferior",
+  "terms": [
+   "lower slanted neck muscle",
+   "obliquus capitis inferior"
+  ]
+ },
+ {
+  "id": "jaw_joint",
+  "region": "head",
+  "kind": "joint",
+  "label": "Jaw joint",
+  "anatomical": "Temporomandibular joint (TMJ)",
+  "terms": [
+   "jaw joint",
+   "temporomandibular joint (tmj)",
+   "temporomandibular joint"
+  ]
+ }
+]

@@ -31,6 +31,7 @@ export default function IntakePanel({ visit, mode, missed, selected, onSelectReg
   const copy = COPY[mode]
   const painted = new Map(visit.painted.map((p) => [p.region, p]))
   const missedSet = new Set(missed.map((p) => p.region))
+  const missedStatus = new Map(missed.map((p) => [p.region, p.coverage]))
 
   return (
     <aside className="flex min-h-0 flex-col gap-5 border-r border-border p-5">
@@ -104,7 +105,11 @@ export default function IntakePanel({ visit, mode, missed, selected, onSelectReg
                         {p ? (
                           <>
                             <span className={style.text}>{style.label}</span>
-                            {isMissed && <span className="text-flag"> · Not discussed</span>}
+                            {isMissed && (
+                              <span className="text-flag">
+                                {missedStatus.get(region) === 'pt_asked' ? ' · Asked, no answer' : ' · Not discussed'}
+                              </span>
+                            )}
                           </>
                         ) : (
                           `${CLINICAL_TERMS[region] ? `${CLINICAL_TERMS[region]} · ` : ''}Not marked`

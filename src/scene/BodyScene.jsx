@@ -14,7 +14,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { VignetteShader } from 'three/addons/shaders/VignetteShader.js'
 import { visitStore, useVisit, unmentioned } from '../visitStore'
 import { regionLabel } from '../regions'
-import { registerBody, emitRegionClick, glow, setListening, pulse, showAnatomy, anatomyLayer, openMovement, preloadAnatomy } from './bodyApi'
+import { registerBody, emitRegionClick, emitManualView, glow, setListening, pulse, showAnatomy, anatomyLayer, openMovement, preloadAnatomy } from './bodyApi'
 import { DEV_SEGMENTS, DEV_SEGMENT_GAP_MS } from './devSegments'
 import { extract } from '@/lib/api'
 import IntakePicker from './IntakePicker'
@@ -26,6 +26,7 @@ import { MOVEMENTS } from './movements'
 import MovementPanel from './MovementPanel'
 import { faceTexture, loadSavedPhoto, FACE_PHOTO_ENABLED } from './facePhoto'
 import AnatomyOverlay from './AnatomyOverlay'
+import { AutoFollowChip, AutoFollowToggle } from './AutoFollowControls'
 import { createPatientMaterial, patientUniforms } from '../shaders/patientMaterial'
 import {
   ChevronDown,
@@ -583,6 +584,27 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         }
       },
       anatomyLayer: (layer, visible) => setAnatomyLayer(layer, visible),
+      // Auto-follow (src/scene/autoFollow.js).
+      focus(region) {
+        if (simActive || anatomyRegion === region) return
+        if (anatomyRegion) closeAnatomy()
+        focusRegion(region)
+      },
+      async showStructure(region, id) {
+        if (!canAnatomyRef.current) return focusRegion(region)
+        if (simActive || anatomyRegion !== region) await openAnatomy(region)
+        if (disposed || anatomyRegion !== region) return
+        const mesh = [...anatomy.meshes(), ...anatomy.markers()].find(
+          (m) => m.userData.fma === id || m.userData.joint === id,
+        )
+        if (!mesh) return
+        anatomy.highlight(mesh, 0.35)
+        setStructure({ ...mesh.userData })
+      },
+      home() {
+        if (!anatomyRegion) resetView()
+      },
+      state: () => ({ anatomyOpen: !!anatomyRegion, simPlaying: !!simActive }),
       select(region) {
         setSelected(region)
         emitRegionClick(region)
@@ -939,6 +961,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       const action = shiftSlide || KEY_ACTIONS[e.key.length === 1 ? e.key.toLowerCase() : e.key]
       if (!action) return
       e.preventDefault() // arrows would otherwise scroll a panel
+      emitManualView()
       action()
     }
     window.addEventListener('keydown', onKeyDown)
@@ -1111,7 +1134,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       const visitNow = visitStore.get()
       const painted = new Map(visitNow.painted.map((p) => [p.region, p]))
       const ended = modeRef.current === 'ended'
-      const missed = ended ? new Set(unmentioned(visitNow).map((p) => p.region)) : null
+      const flagged = ended ? new Map(unmentioned(visitNow).map((p) => [p.region, p.coverage])) : null
+      const missed = flagged ? new Set(flagged.keys()) : null
       const checks = visitNow.observations ?? []
       const assessed = modeRef.current !== 'paint' ? (checks[checks.length - 1]?.assessedRegion ?? null) : null
       for (const region of SHAPE_ORDER) {
@@ -1161,7 +1185,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         entry.el.classList.toggle('assessed', isAssessed)
         if (!entry.label.visible) return
         const text = isMissed
-          ? `${regionLabel(region)} · not discussed`
+          ? `${regionLabel(region)} · ${flagged.get(region) === 'pt_asked' ? 'asked, no answer' : 'not discussed'}`
           : isAssessed
             ? `Area assessed by PT · ${regionLabel(region)}`
             : `${regionLabel(region)} · ${p.type} · ${toTen(p.intensity)}/10`
@@ -1266,12 +1290,14 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
   const entry = selected ? visit.painted.find((p) => p.region === selected) : null
 
   return (
-    <div className="scene">
+    <div className="scene" onPointerDownCapture={emitManualView} onWheelCapture={emitManualView}>
       <div ref={mountRef} className="scene" />
+      <AutoFollowChip visible={mode === 'visit' && !anatomyOpen} />
       {/* View controls: a floating functional layer over the 3D content. */}
       <div className="pointer-events-none absolute inset-x-4 top-4 flex items-start justify-between gap-3">
         {/* Show Anatomy puts its own panel in this corner. */}
-        {anatomyOpen ? (
+        {/* During the visit the hint gives way to Auto-Follow (the gestures were shown at Mark Pain). */}
+        {anatomyOpen || mode === 'visit' ? (
           <span />
         ) : (
           <p className="rounded-full bg-card/85 px-3 py-1.5 text-sm text-muted-foreground ring-1 ring-border backdrop-blur">
@@ -1284,6 +1310,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
             <ViewButton label="Zoom In (+)" onClick={() => viewRef.current?.zoom(1 / ZOOM_STEP)} icon={ZoomIn} iconOnly />
             <ViewButton label="Turn Around" onClick={() => viewRef.current?.turnAround()} icon={RotateCcw} />
             <ViewButton label="Whole Body" onClick={() => viewRef.current?.resetView()} icon={Maximize2} />
+            {mode === 'visit' && !anatomyOpen && <AutoFollowToggle />}
             <ViewButton
               label="Controls"
               title="Show or hide the view controls (?)"

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { mockVisit } from './mockVisit'
+import { flaggedPain, goalCoverage } from './lib/coverage'
 
 // One visit state. Painting and speech write; the 3D body and UI only read.
 // A real visit starts empty; mockVisit only supplies the shape and the speaker colors.
@@ -20,6 +21,7 @@ export const emptyVisit = () => ({
   observations: [],
   anatomyNotes: [],
   painArcs: {}, // Reach Up: { right_shoulder: { from, to } } in degrees of arm raise
+  coverageReview: {}, // the PT's own call per marked region: { [region]: { status, note?, at } }
 })
 
 // The visit is kept in this browser, so a page refresh mid-visit loses nothing. New Visit and
@@ -168,6 +170,24 @@ export const visitStore = {
     state = { ...state, painArcs }
     emit()
   },
+  // Coverage review (src/lib/coverage.js): the PT confirms or corrects whether a marked pain came
+  // up. { status, note? } or null to go back to the suggestion.
+  setCoverageReview(region, review) {
+    const coverageReview = { ...(state.coverageReview ?? {}) }
+    if (review) coverageReview[region] = { ...review, at: new Date().toISOString() }
+    else delete coverageReview[region]
+    state = { ...state, coverageReview }
+    emit()
+  },
+  // The same for the goal: { status: 'discussed' | 'not_discussed' } or null.
+  setGoalReview(review) {
+    if (!state.goal) return
+    const goal = { ...state.goal }
+    if (review) goal.review = { ...review, at: new Date().toISOString() }
+    else delete goal.review
+    state = { ...state, goal }
+    emit()
+  },
   removeAnatomyNote(id) {
     if (!editable()) return
     state = { ...state, anatomyNotes: (state.anatomyNotes ?? []).filter((n) => n.id !== id) }
@@ -215,24 +235,17 @@ export const visitStore = {
   isViewingPast: () => !!live,
 }
 
-// The whole "catch": painted regions minus every region mentioned in any segment.
+// The catch: marked pain that never came up, or that the PT asked about without an answer
+// (src/lib/coverage.js). Each item is the painted entry plus { coverage, evidence }.
 export function unmentioned(visit) {
-  const mentioned = new Set(visit.segments.flatMap((s) => s.regions))
-  return visit.painted.filter((p) => !mentioned.has(p.region))
+  return flaggedPain(visit)
 }
 
 export function useVisit() {
   return useSyncExternalStore(visitStore.subscribe, visitStore.get)
 }
 
-// Did the goal come up? True when some line shares the goal's content words: one is enough for a
-// short goal ("Put plates on the top shelf" → plates, shelf), two for a longer one.
-const STOP_WORDS = new Set(['the', 'and', 'with', 'want', 'like', 'able', 'again', 'would', 'could', 'some', 'that', 'this', 'from', 'into', 'without', 'being'])
+// Did the goal come up? Word overlap with any line, unless the PT corrected it (src/lib/coverage.js).
 export function goalDiscussed(visit) {
-  const words = (text) => new Set(text.toLowerCase().match(/[a-z]{4,}/g)?.filter((w) => !STOP_WORDS.has(w)) ?? [])
-  if (!visit.goal?.text) return false
-  const goal = words(visit.goal.text)
-  if (!goal.size) return false
-  const need = goal.size >= 4 ? 2 : 1
-  return visit.segments.some((s) => [...words(s.text)].filter((w) => goal.has(w)).length >= need)
+  return goalCoverage(visit)?.discussed ?? false
 }

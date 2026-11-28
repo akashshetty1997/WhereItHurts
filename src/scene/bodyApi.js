@@ -2,6 +2,7 @@
 // BodyScene registers the implementation when it mounts; calls before that are ignored.
 let impl = null
 const clickListeners = new Set()
+const manualListeners = new Set()
 
 export function registerBody(next) {
   impl = next
@@ -58,6 +59,31 @@ export function playMovement(region, label, direction) {
 }
 export function preloadAnatomy() {
   impl?.preloadAnatomy()
+}
+
+// Auto-follow (src/scene/autoFollow.js): fly to a region (closing Show Anatomy if it shows another
+// one), open Show Anatomy on one structure or joint as if the PT clicked it (`id`: an FMA id or a
+// joint id), go back to the whole body, and whether anatomy or a movement simulation is open.
+export function focus(region) {
+  impl?.focus(region)
+}
+export function showStructure(region, id) {
+  impl?.showStructure(region, id)
+}
+export function home() {
+  impl?.home()
+}
+export function bodyState() {
+  return impl?.state() ?? { anatomyOpen: false, simPlaying: false }
+}
+
+// Someone dragged, scrolled, clicked or used the view keys on the body. Returns unsubscribe.
+export function onManualView(callback) {
+  manualListeners.add(callback)
+  return () => manualListeners.delete(callback)
+}
+export function emitManualView() {
+  manualListeners.forEach((callback) => callback())
 }
 
 // Use My Photo: put the face in `photo` (a canvas, see src/scene/facePhoto.js) on the patient, or

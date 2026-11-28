@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import BodyScene from './scene/BodyScene'
-import { selectRegion, playMovement } from './scene/bodyApi'
+import { selectRegion, playMovement, focus, showStructure, home, bodyState, onManualView } from './scene/bodyApi'
+import { createAutoFollow } from './scene/autoFollow'
+import { autoFollowState } from './scene/autoFollowState'
 import { spokenMovement } from './lib/spokenMovement'
 import AppHeader from './panels/AppHeader'
 import IntakePanel from './panels/IntakePanel'
@@ -73,6 +75,31 @@ export default function App() {
       offUpdate()
     }
   }, [])
+  // Auto-follow: while the PT explains, the camera goes to the body part (or, for a PT, the
+  // anatomy structure) being talked about (src/scene/autoFollow.js). Lines that start a movement
+  // simulation are left to the effect above.
+  const canAnatomyRef = useRef(canShowAnatomy)
+  canAnatomyRef.current = canShowAnatomy
+  useEffect(() => {
+    const director = createAutoFollow(
+      { focus, showStructure, home, state: bodyState },
+      {
+        isVisit: () => modeRef.current === 'visit',
+        isOn: () => autoFollowState.get().on,
+        canAnatomy: () => canAnatomyRef.current,
+        onStatus: (target) => autoFollowState.set({ status: target?.label ?? null }),
+      },
+    )
+    const line = (segment) => !spokenMovement(segment) && director.line(segment)
+    const offs = [visitStore.onSegment(line), visitStore.onSegmentUpdate(line), onManualView(() => director.manual())]
+    return () => {
+      offs.forEach((off) => off())
+      director.stop()
+    }
+  }, [])
+  useEffect(() => {
+    if (mode !== 'visit') autoFollowState.set({ status: null })
+  }, [mode])
   const missed = shownMode === 'ended' ? unmentioned(visit) : []
 
   function newVisit() {
