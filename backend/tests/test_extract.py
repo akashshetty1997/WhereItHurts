@@ -16,6 +16,7 @@ def test_extract_uses_keywords_without_an_api_key(client) -> None:
         "movement": None,
         "pain_type": None,
         "goal": None,
+        "structures": [],
         "source": "keywords",
     }
 

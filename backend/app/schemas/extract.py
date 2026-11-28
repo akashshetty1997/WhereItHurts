@@ -46,6 +46,9 @@ class Extraction(BaseModel):
     pain_type: PainType | None = None
     # During prep: what the patient wants to be able to do again ("put plates on the top shelf").
     goal: str | None = None
+    # Show Anatomy structures or joints the PT names or describes ("the bone at the top of your
+    # arm" -> FMA23130), ids from app/data/anatomy_structures.json. Auto-follow opens them.
+    structures: list[str] = []
 
 
 class ExtractResponse(Extraction):

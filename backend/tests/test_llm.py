@@ -85,6 +85,17 @@ def test_bad_values_from_claude_are_dropped(client, fake_claude) -> None:
     assert body["rating"] is None
 
 
+def test_claude_names_anatomy_structures_and_unknown_ids_are_dropped(client, fake_claude) -> None:
+    fake_claude(answer(structures=["FMA23130", "FMA99999", "right_ac_joint", "FMA23130"]))
+    body = smart(client, "This is the bone at the top of your arm, near your AC joint.").json()
+    assert body["structures"] == ["FMA23130", "right_ac_joint"]
+
+
+def test_keywords_never_fill_structures(client) -> None:
+    body = client.post("/api/extract", json={"text": "This is your collarbone."}).json()
+    assert body["structures"] == []
+
+
 def test_a_tapped_region_always_counts(client, fake_claude) -> None:
     fake_claude(answer(rating=5, pain_type="aching"))
     body = smart(client, "it aches, about a five", region="right_shoulder").json()

@@ -11,20 +11,26 @@ import logging
 from app.config import Settings
 from app.constants import EXTRACT_SOURCE_KEYWORDS, EXTRACT_SOURCE_LLM, REGION_IDS
 from app.schemas.extract import Extraction, ExtractRequest, ExtractResponse
-from app.services import llm
+from app.services import llm, vocabulary
 from app.services.keywords import extract_keywords
 
 _logger = logging.getLogger("whereithurts.extraction")
 
 
 def _valid(extraction: Extraction, tapped: str | None) -> Extraction:
-    """Drop region ids the frontend doesn't know; a tapped region (voice intake) always counts."""
+    """Drop region and structure ids the frontend doesn't know; a tapped region (voice intake)
+    always counts."""
     known = set(REGION_IDS)
+    structures = vocabulary.structure_ids()
     regions = [r for r in extraction.regions if r in known]
     if tapped and tapped not in regions:
         regions.insert(0, tapped)
     return extraction.model_copy(
-        update={"regions": regions, "path": [r for r in extraction.path if r in known]}
+        update={
+            "regions": regions,
+            "path": [r for r in extraction.path if r in known],
+            "structures": [s for s in dict.fromkeys(extraction.structures) if s in structures],
+        }
     )
 
 
@@ -44,6 +50,7 @@ def _merge(fast: Extraction, smart: Extraction) -> Extraction:
         movement=smart.movement,
         pain_type=smart.pain_type or fast.pain_type,
         goal=smart.goal or fast.goal,
+        structures=smart.structures,  # keywords never fill it
     )
 
 
