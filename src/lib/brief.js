@@ -37,7 +37,7 @@ export function buildBrief(last, today, now = new Date()) {
   const goal = v.goal?.text ? { text: v.goal.text, discussed: goalCoverage(v)?.discussed ?? false } : null
 
   const notConfirmed = observations
-    .filter((o) => o.confirmed === false)
+    .filter((o) => o.confirmed === false && !o.correction) // corrections have their own section
     .map((o) => ({ region: o.symptomRegion ?? o.assessedRegion ?? null, text: describeCheck(o) }))
 
   const movementChecks = observations

@@ -10,6 +10,7 @@ import { REGIONS, regionLabel } from '@/regions'
 import { toTen } from '@/scene/intensity'
 import { goalDiscussed } from '@/visitStore'
 import { COVERAGE_LABELS, coverage } from '@/lib/coverage'
+import { correctionState, ptReportStatus, takeHomeLine } from '@/lib/corrections'
 import { ANATOMY_PURPOSE, formatVisitDate, groupAnatomyNotes } from '@/lib/visitDisplay'
 import { describePainArc } from '@/scene/movements'
 
@@ -146,7 +147,7 @@ function PtReport({ visit, missed, maps, user }) {
                     {o.before ?? '–'} → {o.after ?? '–'}
                     {o.response ? ` (${o.response})` : ''}
                   </td>
-                  <td>{o.confirmed === true ? 'Yes' : o.confirmed === false ? 'No, disagrees' : 'Not asked'}</td>
+                  <td>{ptReportStatus(o)}</td>
                 </tr>
               ))}
             </tbody>
@@ -254,9 +255,8 @@ function TakeHome({ visit, missed, maps }) {
         <Section title="What Changed">
           <ul>
             {checks.map((o) => (
-              <li key={o.id}>
-                {o.movement ? `When you did “${o.movement}”, your` : 'Your'} {lower(o.symptomRegion)} went from {o.before} to{' '}
-                {o.after} out of 10.
+              <li key={o.id} className={correctionState(o) === 'requested' ? 'report-flag' : undefined}>
+                {takeHomeLine(o)}
               </li>
             ))}
           </ul>

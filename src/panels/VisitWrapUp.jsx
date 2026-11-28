@@ -8,38 +8,21 @@ import { describePainArc } from '@/scene/movements'
 import { PAIN_STYLES, ANATOMY_PURPOSE, SPEAKER_NAMES, SPEAKER_TEXT, groupAnatomyNotes } from '@/lib/visitDisplay'
 import { COVERAGE_LABELS, FLAGGED, coverage, evidenceLines, goalCoverage } from '@/lib/coverage'
 import { cn } from '@/lib/utils'
+import { useUser } from '@/auth/userContext'
+import { CORRECTION_BADGE, correctionState, describeVersion } from '@/lib/corrections'
+import ConfirmCheck from './ConfirmCheck'
 
 const lower = (region) => (region ? REGIONS[region].toLowerCase() : 'symptom')
 
 export function ConfirmChecks({ visit }) {
+  const { user, testMode } = useUser()
   const checks = (visit.observations ?? []).filter((o) => o.before != null && o.after != null)
   if (!checks.length) return null
   return (
     <section className="space-y-2" aria-label="Confirm what changed">
       <h2 className="text-xl font-bold">Does This Match?</h2>
       {checks.map((o) => (
-        <div key={o.id} className="space-y-3 rounded-xl bg-secondary/60 p-4">
-          <p className="text-base leading-snug">
-            During <b>{o.movement ? `“${o.movement}”` : 'the movement'}</b>, you said your {lower(o.symptomRegion)} went from{' '}
-            <b>{o.before}/10</b> to <b>{o.after}/10</b>. Does that match what you felt?
-          </p>
-          {o.confirmed == null && visitStore.isViewingPast() ? (
-            <p className="text-sm font-bold text-muted-foreground">Not confirmed.</p>
-          ) : o.confirmed == null ? (
-            <div className="grid grid-cols-2 gap-2">
-              <Button className="gap-2 font-bold" onClick={() => visitStore.updateObservation(o.id, { confirmed: true })}>
-                <Check className="size-4" aria-hidden /> That’s Right
-              </Button>
-              <Button variant="secondary" className="gap-2 font-bold" onClick={() => visitStore.updateObservation(o.id, { confirmed: false })}>
-                <X className="size-4" aria-hidden /> Not Quite
-              </Button>
-            </div>
-          ) : (
-            <p className={cn('text-sm font-bold', o.confirmed ? 'text-clear' : 'text-flag')}>
-              {o.confirmed ? 'Confirmed by the patient.' : 'The patient says it doesn’t match. Talk it through with the PT.'}
-            </p>
-          )}
-        </div>
+        <ConfirmCheck key={o.id} o={o} canResolve={user?.role === 'pt' || testMode} />
       ))}
     </section>
   )
@@ -90,7 +73,15 @@ export function PtSummary({ visit, missed }) {
                 {o.before ?? '–'} → {o.after ?? '–'}
                 {o.response && ` · ${o.response}`}
                 {o.confirmed === true && ' · confirmed'}
-                {o.confirmed === false && ' · patient disagrees'}
+                {correctionState(o) === 'requested' && (
+                  <span className="font-bold text-flag">
+                    {' '}
+                    · {CORRECTION_BADGE}: {describeVersion(o.correction.patientVersion, o)}
+                  </span>
+                )}
+                {correctionState(o) === 'accepted' && ' · corrected by patient, accepted by PT'}
+                {correctionState(o) === 'kept_original' && ` · PT kept the original (patient: ${describeVersion(o.correction.patientVersion, o)})`}
+                {o.confirmed === false && !o.correction && ' · patient disagrees'}
               </li>
             ))}
           </ul>
