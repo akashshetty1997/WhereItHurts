@@ -33,6 +33,7 @@ curl localhost:8000/api/health                # {"transcription":"ok","llm":"cla
 | `src/scene/BodyScene.jsx`, `src/shaders/patientMaterial.js` | three.js scene: patient model, pain looks, glows, pain-path pulse, amber flag, camera and view controls |
 | `src/panels/PrepListen.jsx` | **Record Your Prep**: say where it hurts and your goal; keywords first, Claude for free phrasing |
 | `src/panels/LiveListen.jsx`, `liveVoice.js` | **Record the Visit**: mic → WebSocket `/api/live`; voice enrollment, then every line labelled PT / Patient |
+| `src/panels/TypedLine.jsx`, `prepLine.js` | **Type a line** instead of speaking (prep or visit, PT or Patient): same path as speech; works with the server off, then tag body parts on the line |
 | `src/panels/smartPass.js` | Claude improves each visit line in the background (missed body parts, rating, movement, follow-up) |
 | `src/panels/movementLog.js`, `MovementCheck.jsx` | Movement check (PT names a movement, patient rates before / after) |
 | `src/scene/anatomy.js`, `AnatomyOverlay.jsx` | **Show Anatomy** (PT or Testing mode): reference bones, muscles and joints inside a selected region, see-through skin, Explain to Patient, Add to Report |
