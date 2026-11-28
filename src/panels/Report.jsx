@@ -10,15 +10,14 @@ import { REGIONS, regionLabel } from '@/regions'
 import { toTen } from '@/scene/intensity'
 import { goalDiscussed } from '@/visitStore'
 import { COVERAGE_LABELS, coverage } from '@/lib/coverage'
-import { ANATOMY_PURPOSE, groupAnatomyNotes } from '@/lib/visitDisplay'
+import { ANATOMY_PURPOSE, formatVisitDate, groupAnatomyNotes } from '@/lib/visitDisplay'
 import { describePainArc } from '@/scene/movements'
 
 const CREDIT = 'Anatomy: BodyParts3D, © DBCLS, CC BY 4.0 (reference illustrations, not scans).'
 const lower = (region) => REGIONS[region]?.toLowerCase() ?? 'symptom'
 
-function formatDate(date = new Date()) {
-  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
-}
+// The visit's own date, so reprinting an old visit keeps the day it happened.
+const visitDate = (visit) => formatVisitDate(visit.endedAt ?? visit.startedAt ?? new Date().toISOString(), { long: true })
 
 // Opens the print dialog once the report is in the page; onDone when the dialog closes.
 export default function Report({ kind, visit, missed, maps, user, onDone }) {
@@ -77,7 +76,8 @@ function PtReport({ visit, missed, maps, user }) {
       <header className="report-header">
         <h1>Visit Report</h1>
         <p>
-          {formatDate()}
+          {visitDate(visit)}
+          {visit.patientKey ? ` · Patient: ${visit.patientKey}` : ''}
           {user?.role === 'pt' ? ` · PT: ${user.name}` : user?.name ? ` · Patient: ${user.name}` : ''}
         </p>
       </header>
@@ -224,7 +224,7 @@ function TakeHome({ visit, missed, maps }) {
     <article className="take-home">
       <header className="report-header">
         <h1>Your Visit</h1>
-        <p>{formatDate()}</p>
+        <p>{visitDate(visit)}</p>
       </header>
 
       {visit.goal?.text && (

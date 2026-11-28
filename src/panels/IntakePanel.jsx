@@ -27,7 +27,7 @@ const COPY = {
 
 // Left sidebar: the goal, then every body part as one grouped list. The list is also the
 // keyboard way to select a part (accessibility.md › Mobility: offer alternatives to gestures).
-export default function IntakePanel({ visit, mode, missed, selected, onSelectRegion, patient, onPatientChange }) {
+export default function IntakePanel({ visit, mode, missed, selected, onSelectRegion, patient, onPatientChange, canNamePatient }) {
   const copy = COPY[mode]
   const painted = new Map(visit.painted.map((p) => [p.region, p]))
   const missedSet = new Set(missed.map((p) => p.region))
@@ -39,6 +39,8 @@ export default function IntakePanel({ visit, mode, missed, selected, onSelectReg
         <h2 className="text-xl font-bold">{copy.title}</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">{copy.hint}</p>
       </div>
+
+      {canNamePatient && mode === 'paint' && <PatientKeyField value={visit.patientKey} />}
 
       {onPatientChange && mode === 'paint' && (
         <div className="flex items-center justify-between gap-3">
@@ -171,5 +173,23 @@ function GoalSection({ goal, editable }) {
         </Button>
       )}
     </section>
+  )
+}
+
+// Which patient this visit is for: initials or a nickname only (never real patient data), so Past
+// Visits can show one patient's visits.
+function PatientKeyField({ value }) {
+  return (
+    <label className="flex items-center justify-between gap-3">
+      <span className="text-sm font-bold text-muted-foreground">Patient</span>
+      <Input
+        value={value ?? ''}
+        onChange={(e) => visitStore.setPatientKey(e.target.value)}
+        placeholder="Initials or nickname"
+        maxLength={24}
+        className="h-9 w-44 text-base"
+        aria-label="Patient initials or nickname"
+      />
+    </label>
   )
 }

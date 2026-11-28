@@ -39,7 +39,11 @@ export default function ConversationPanel({ visit, mode, selected, missed }) {
               <Target className={cn('mt-0.5 size-5 shrink-0', goalDiscussed(visit) ? 'text-clear' : 'text-flag')} aria-hidden />
               <span>
                 Your goal, “{visit.goal.text}”,{' '}
-                {goalDiscussed(visit) ? 'came up in the visit.' : 'didn’t come up. Ask about it before you leave.'}
+                {goalDiscussed(visit)
+                  ? 'came up in the visit.'
+                  : visitStore.isViewingPast()
+                    ? 'didn’t come up.'
+                    : 'didn’t come up. Ask about it before you leave.'}
               </span>
             </p>
           )}

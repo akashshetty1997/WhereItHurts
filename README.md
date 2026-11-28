@@ -42,7 +42,8 @@ curl localhost:8000/api/health                # {"transcription":"ok","llm":"cla
 | `tools/anatomy/` | Builds `public/models/anatomy.glb` from BodyParts3D (`structures.json` lists each region's structures and their `synonyms`; `node tools/anatomy/build.mjs`). `node tools/anatomy/terms.mjs` rewrites the word lists only: `src/scene/anatomyTerms.json` and `backend/app/data/anatomy_structures.json` |
 | `src/panels/VisitWrapUp.jsx` | Summary: confirm cards, **Review What Came Up** (PT), PT summary |
 | `src/lib/coverage.js` | Did each marked pain and the goal come up? Never came up / Asked, but the patient didn't answer / The patient talked about it / Reviewed by PT, with the sentences behind each |
-| `src/visitStore.js` | The visit state (kept in the browser across a refresh; **New Visit** clears it) |
+| `src/visitStore.js` | The visit state (kept in the browser across a refresh; **New Visit** starts a new one). Each visit has its own id, start / end dates and an optional patient key (initials or a nickname) |
+| `src/lib/history.js`, `src/panels/PastVisits.jsx` | **Past Visits** (PT and Testing mode): finished visits kept in this browser (50 per account), filtered by patient, opened read-only with their body marks and reports (dated the day of the visit). The only module that touches history storage, so a server can replace it |
 | `src/auth/` | Demo accounts (patient / PT), Testing mode, Try the Demo, light / dark |
 | `backend/` | FastAPI: extraction (keywords + Claude), live listening, transcription, accounts. See [backend/README.md](backend/README.md) |
 

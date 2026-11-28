@@ -11,6 +11,8 @@ import { visitStore, useVisit, unmentioned, loadSession, saveSession } from './v
 import { onLine, onLineUpdate, resetMovementCheck } from './panels/movementLog'
 import { useUser } from './auth/userContext'
 import { PATIENTS, DEFAULT_PATIENT } from './scene/patientRegions'
+import { archiveVisit, ownerIdOf } from './lib/history'
+import PastVisits from './panels/PastVisits'
 
 const NEXT_MODE = { paint: 'visit', visit: 'ended', ended: 'paint' }
 const MODES = Object.keys(NEXT_MODE)
@@ -31,6 +33,23 @@ export default function App() {
   // Show Anatomy is a PT tool (Testing mode shows it to anyone).
   const canShowAnatomy = user?.role === 'pt' || testMode
   useEffect(() => saveSession({ mode, patient }), [mode, patient])
+  // End Visit stamps the end; Back to Marking reopens it.
+  useEffect(() => visitStore.setStatus(mode === 'ended' ? 'ended' : 'in_progress'), [mode])
+  // Past Visits (PT and Testing mode): one opens read-only in place of the current visit.
+  const ownerId = ownerIdOf(user)
+  const [pastOpen, setPastOpen] = useState(false)
+  const [viewing, setViewing] = useState(null) // the history record being looked at
+  function openPast(record) {
+    setPastOpen(false)
+    setSelected(null)
+    visitStore.viewPast(record.visit)
+    setViewing(record)
+  }
+  function closePast() {
+    visitStore.closePast()
+    setViewing(null)
+  }
+  const shownMode = viewing ? 'ended' : mode
   // Every conversation line feeds the movement check (PT names a movement, patient rates it), and
   // so does what Claude adds to a line afterwards (src/panels/smartPass.js).
   useEffect(() => visitStore.onSegment(onLine), [])
@@ -81,9 +100,10 @@ export default function App() {
   useEffect(() => {
     if (mode !== 'visit') autoFollowState.set({ status: null })
   }, [mode])
-  const missed = mode === 'ended' ? unmentioned(visit) : []
+  const missed = shownMode === 'ended' ? unmentioned(visit) : []
 
   function newVisit() {
+    archiveVisit(visitStore.get(), ownerId) // kept in Past Visits
     visitStore.reset()
     resetMovementCheck()
     setSelected(null)
@@ -92,28 +112,37 @@ export default function App() {
 
   return (
     <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr] overflow-hidden bg-background">
-      <AppHeader mode={mode} onAction={() => setMode(NEXT_MODE[mode])} onNewVisit={newVisit} />
+      <AppHeader
+        mode={mode}
+        onAction={() => setMode(NEXT_MODE[mode])}
+        onNewVisit={newVisit}
+        onPastVisits={canSwitchBody ? () => setPastOpen(true) : null}
+        viewing={viewing}
+        onClosePast={closePast}
+      />
+      {pastOpen && <PastVisits ownerId={ownerId} onOpen={openPast} onClose={() => setPastOpen(false)} />}
       <div className="grid min-h-0 grid-cols-[320px_minmax(0,1fr)_360px]">
         {/* The list and the body share one selection: picking either one selects both. */}
         <IntakePanel
           visit={visit}
-          mode={mode}
+          mode={shownMode}
           missed={missed}
           selected={selected}
           onSelectRegion={selectRegion}
           patient={patient}
           onPatientChange={canSwitchBody ? setPatient : null}
+          canNamePatient={canSwitchBody}
         />
         <main className="relative min-h-0 min-w-0 overflow-hidden bg-stage text-foreground">
           <BodyScene
             key={patient}
             patient={patient}
             onRegionClick={setSelected}
-            mode={mode}
+            mode={shownMode}
             canShowAnatomy={canShowAnatomy}
           />
         </main>
-        <ConversationPanel visit={visit} mode={mode} selected={selected} missed={missed} />
+        <ConversationPanel visit={visit} mode={shownMode} selected={selected} missed={missed} />
       </div>
     </div>
   )

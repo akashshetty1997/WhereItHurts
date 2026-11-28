@@ -24,3 +24,9 @@ export function groupAnatomyNotes(notes) {
   for (const n of notes) groups.set(n.complaintRegion, [...(groups.get(n.complaintRegion) ?? []), n])
   return [...groups]
 }
+
+// A visit's own date (not today's), e.g. "Nov 20, 2026"; `long` for reports: "November 20, 2026".
+export function formatVisitDate(iso, { long = false } = {}) {
+  if (!iso) return 'Date not recorded'
+  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: long ? 'long' : 'short', day: 'numeric' })
+}
