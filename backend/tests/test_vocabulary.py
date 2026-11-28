@@ -40,8 +40,8 @@ def test_ordinary_sentences_are_left_alone() -> None:
     ("text", "regions"),
     [
         ("My trap is really tight", ["neck"]),
-        ("The rotator cup is sore", ["right_shoulder"]),
-        ("My hamstrings and my ACL", ["left_leg", "left_knee"]),
+        ("The right rotator cup is sore", ["right_shoulder"]),
+        ("My left hamstrings and my left ACL", ["left_leg", "left_knee"]),
         ("Pain in the lumbar area", ["lower_back"]),
         ("Let's work on external rotation", []),
     ],
@@ -51,9 +51,14 @@ def test_pt_terms_map_to_regions(text: str, regions: list[str]) -> None:
 
 
 def test_correction_shows_in_the_extraction() -> None:
-    result = extract_keywords("it runs from my trapezoid down into my rotator cup")
-    assert result.corrected_text == "it runs from my trapezius down into my rotator cuff"
+    result = extract_keywords("it runs from my trapezoid down into my right rotator cup")
+    assert result.corrected_text == "it runs from my trapezius down into my right rotator cuff"
     assert result.path == ["neck", "right_shoulder"]
+
+
+def test_pt_terms_with_no_side_are_unsided() -> None:
+    result = extract_keywords("The rotator cup is sore and so is my ACL")
+    assert (result.regions, result.unsided) == ([], ["right_shoulder", "left_knee"])
 
 
 def test_no_phrase_points_at_two_regions() -> None:

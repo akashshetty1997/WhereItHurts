@@ -61,12 +61,29 @@ def test_upper_back_travels_to_lower_back() -> None:
         ("My left shoulder is sore", []),  # we only have a right shoulder
         ("My right thigh hurts when I sit", []),
         ("My left knee hurts", ["left_knee"]),
-        ("My knee hurts right now", ["left_knee"]),  # "right" isn't next to the body part
         ("My right shoulder and my right knee", ["right_shoulder"]),
     ],
 )
 def test_the_other_side_is_not_counted(text: str, regions: list[str]) -> None:
     assert extract_keywords(text).regions == regions
+    assert extract_keywords(text).unsided == []  # the other side isn't "no side"
+
+
+@pytest.mark.parametrize(
+    ("text", "regions", "unsided"),
+    [
+        ("My shoulder hurts", [], ["right_shoulder"]),
+        ("My knee hurts right now", [], ["left_knee"]),  # "right" isn't next to the body part
+        ("Raise your arm and tell me about the shoulder.", [], ["right_shoulder"]),
+        ("My right shoulder and my knee", ["right_shoulder"], ["left_knee"]),
+        ("Your left knee, and the knee cap too", ["left_knee"], []),  # once placed, it's placed
+        ("My calf and my neck", ["neck"], ["left_leg"]),
+        ("My back hurts", ["lower_back"], []),  # the back has no sides
+    ],
+)
+def test_a_side_is_never_guessed(text: str, regions: list[str], unsided: list[str]) -> None:
+    result = extract_keywords(text)
+    assert (result.regions, result.unsided) == (regions, unsided)
 
 
 @pytest.mark.parametrize(

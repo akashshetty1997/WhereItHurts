@@ -73,3 +73,11 @@ test('unresolved corrections are listed', () => {
 test('days between ignores the time of day', () => {
   assert.equal(daysBetween('2026-11-26T23:00:00', new Date('2026-11-27T01:00:00')), 1)
 })
+
+test('mentions with no side said show under corrections', () => {
+  const withUnsided = {
+    ...last,
+    visit: { ...last.visit, segments: [...last.visit.segments, { id: 'c', speaker: 'patient', text: 'My shoulder too.', regions: [], unsided: ['right_shoulder'] }] },
+  }
+  assert.deepEqual(buildBrief(withUnsided, {}).corrections.map((c) => c.text), ['Shoulder (side not said)'])
+})

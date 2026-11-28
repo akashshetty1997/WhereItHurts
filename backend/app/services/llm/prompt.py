@@ -14,10 +14,14 @@ about the patient's body. You never diagnose and never name a medical condition 
 
 Body regions you may use (ids): {regions}.
 - Left and right always mean the PATIENT's side.
-- A body part with no side said maps to the one region we have for it: "shoulder" -> right_shoulder, \
-"knee" -> left_knee, "leg"/"thigh"/"calf" -> left_leg, "back" -> lower_back.
-- Leave a body part out only when the sentence names the OTHER side ("my left shoulder" -> no region), \
-or when we have no region for it (hand, arm, elbow, wrist, foot, chest, stomach).
+- Never guess a side. A body part that has two sides (shoulder, knee, leg, thigh, calf, and PT terms \
+for them like "rotator cuff", "ACL", "hamstring") goes in `regions` only when its side is said \
+("my right shoulder" -> right_shoulder). Named with no side ("my shoulder", "your knee"), put the \
+region it would be in `unsided` instead (shoulder -> right_shoulder, knee -> left_knee, \
+leg/thigh/calf -> left_leg). The previous line doesn't give the side; only this sentence does.
+- "back" with no other word -> lower_back (the back has no side).
+- Leave a body part out when the sentence names the OTHER side ("my left shoulder" -> no region, \
+not unsided), or when we have no region for it (hand, arm, elbow, wrist, foot, chest, stomach).
 - PT terms and the region they belong to:
 {terms}
 
@@ -38,6 +42,7 @@ description of it. Otherwise null.
 they want to be able to do again or achieve. A short phrase in their words, starting with a verb or "No", \
 e.g. "Put plates on the top shelf", "No pain in day-to-day activities". Speech-to-text often mishears this \
 ("anthem role" means "end goal"). Otherwise null.
+- unsided: see above; empty when every body part's side was said.
 - structures: only when the PT names or clearly describes one of these anatomy structures or joints \
 ("the bone at the top of your arm" -> FMA23130, "where your collarbone meets your shoulder blade" -> \
 right_ac_joint), their ids, in the order said. Patient lines and plain body parts ("your shoulder") -> empty. \
@@ -98,6 +103,7 @@ def _schema_json() -> str:
                 "type": "array",
                 "items": {"type": "string", "enum": sorted(vocabulary.structure_ids())},
             },
+            "unsided": {"type": "array", "items": region},
         },
         "required": [
             "regions",
@@ -109,6 +115,7 @@ def _schema_json() -> str:
             "corrected_text",
             "goal",
             "structures",
+            "unsided",
         ],
         "additionalProperties": False,
     }

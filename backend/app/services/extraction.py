@@ -30,6 +30,10 @@ def _valid(extraction: Extraction, tapped: str | None) -> Extraction:
             "regions": regions,
             "path": [r for r in extraction.path if r in known],
             "structures": [s for s in dict.fromkeys(extraction.structures) if s in structures],
+            # Said with no side, unless a region (e.g. the tapped one) already places it.
+            "unsided": [
+                r for r in dict.fromkeys(extraction.unsided) if r in known and r not in regions
+            ],
         }
     )
 
@@ -51,6 +55,11 @@ def _merge(fast: Extraction, smart: Extraction) -> Extraction:
         pain_type=smart.pain_type or fast.pain_type,
         goal=smart.goal or fast.goal,
         structures=smart.structures,  # keywords never fill it
+        unsided=[
+            r
+            for r in dict.fromkeys(fast.unsided + smart.unsided)
+            if r not in fast.regions and r not in smart.regions
+        ],
     )
 
 

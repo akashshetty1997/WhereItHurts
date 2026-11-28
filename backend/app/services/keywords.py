@@ -50,19 +50,37 @@ def _wrong_side(region: str, before: str) -> bool:
     return bool(words) and words[-1] in SIDES and words[-1] != side
 
 
-def _region_positions(text: str) -> dict[str, int]:
-    """Region -> where it was first said. A matched phrase is blanked out so shorter phrases
-    inside it ("back" in "upper back") can't match again. A plural "s" also matches."""
+def _side_said(region: str, phrase: str, before: str) -> bool:
+    """A sided region (left_knee, right_shoulder) only counts when its side is said: in the
+    phrase ("left knee") or as the word just before it ("my left knee"). A part named with no
+    side ("my knee") is never guessed; it goes to `unsided` (docs/NEXT_PHASE_PLAN.md, A3)."""
+    side = region.split("_", 1)[0]
+    if side not in SIDES:
+        return True
+    words = before.split()
+    return side in phrase.split() or (bool(words) and words[-1] == side)
+
+
+def _region_positions(text: str) -> tuple[dict[str, int], dict[str, int]]:
+    """(region -> where it was first said, unsided region -> where). A matched phrase is blanked
+    out so shorter phrases inside it ("back" in "upper back") can't match again. A plural "s"
+    also matches."""
     hits: dict[str, int] = {}
+    unsided: dict[str, int] = {}
     for phrase in NOT_A_MENTION:  # same length, so positions stay put
         text = re.sub(rf"\b{re.escape(phrase)}\b", lambda m: " " * len(m.group(0)), text)
     original = text
     for phrase, region in _phrases():
         for m in re.finditer(rf"\b{re.escape(phrase)}s?\b", text):
-            if not _wrong_side(region, original[: m.start()]):
+            before = original[: m.start()]
+            if _wrong_side(region, before):
+                pass  # the other side, which we don't have a region for
+            elif _side_said(region, phrase, before):
                 hits[region] = min(hits.get(region, m.start()), m.start())
+            else:
+                unsided[region] = min(unsided.get(region, m.start()), m.start())
             text = text[: m.start()] + " " * (m.end() - m.start()) + text[m.end() :]
-    return hits
+    return hits, {r: at for r, at in unsided.items() if r not in hits}
 
 
 _NUMBER = rf"(\d{{1,2}}|{'|'.join(NUMBER_WORDS)})"
@@ -112,8 +130,9 @@ def _goal(text: str) -> str | None:
 def extract_keywords(text: str) -> Extraction:
     corrected = vocabulary.correct(text)
     lower = corrected.lower()
-    hits = _region_positions(lower)
+    hits, unsided_hits = _region_positions(lower)
     regions = sorted(hits, key=hits.get)  # in the order they were said
+    unsided = sorted(unsided_hits, key=unsided_hits.get)
     moving = len(regions) > 1 and _first_match(lower, MOVEMENT_WORDS) is not None
     follow_up = corrected.strip() if _first_match(lower, FOLLOW_UP_WORDS) is not None else None
     return Extraction(
@@ -124,4 +143,5 @@ def extract_keywords(text: str) -> Extraction:
         rating=_rating(lower),
         pain_type=_pain_type(lower),
         goal=_goal(corrected),
+        unsided=unsided,
     )

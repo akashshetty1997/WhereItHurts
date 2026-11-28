@@ -11,6 +11,7 @@ import { toTen } from '@/scene/intensity'
 import { goalDiscussed } from '@/visitStore'
 import { COVERAGE_LABELS, coverage } from '@/lib/coverage'
 import { correctionState, ptReportStatus, takeHomeLine } from '@/lib/corrections'
+import { sideNotes } from '@/lib/sides'
 import { ANATOMY_PURPOSE, formatVisitDate, groupAnatomyNotes } from '@/lib/visitDisplay'
 import { describePainArc } from '@/scene/movements'
 
@@ -175,6 +176,16 @@ function PtReport({ visit, missed, maps, user }) {
         </Section>
       )}
 
+      {sideNotes(visit).length > 0 && (
+        <Section title="Mentioned Without a Side">
+          <ul>
+            {sideNotes(visit).map((m) => (
+              <li key={m.label}>{m.label}</li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
       <Section title="Not Discussed">
         {missed.length ? (
           <ul className="report-flag">
@@ -272,6 +283,16 @@ function TakeHome({ visit, missed, maps }) {
                 {n.structure.sentence ? `: ${n.structure.sentence}` : ` (${n.structure.anatomical})`}
                 {n.note && <> Your PT noted: “{n.note}”</>}
               </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {sideNotes(visit).length > 0 && (
+        <Section title="Which Side?">
+          <ul>
+            {sideNotes(visit).map((m) => (
+              <li key={m.label}>{m.side === 'unspecified' ? `${m.label}: tell your PT which side next time.` : m.label}</li>
             ))}
           </ul>
         </Section>

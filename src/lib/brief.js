@@ -6,6 +6,7 @@
 import { REGIONS } from '../regions.js'
 import { toTen } from '../scene/intensity.js'
 import { COVERAGE_LABELS, flaggedPain, goalCoverage } from './coverage.js'
+import { sideNotes } from './sides.js'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const name = (region) => REGIONS[region] ?? region
@@ -33,6 +34,8 @@ export function buildBrief(last, today, now = new Date()) {
   const corrections = observations
     .filter((o) => o.correction?.status === 'requested')
     .map((o) => ({ region: o.symptomRegion ?? null, text: `${o.movement || 'Movement check'}: the patient asked for a correction` }))
+    // Body parts named without a side, or on a side the body doesn't have yet (src/lib/sides.js).
+    .concat(sideNotes(v).map((m) => ({ region: null, text: m.label })))
 
   const goal = v.goal?.text ? { text: v.goal.text, discussed: goalCoverage(v)?.discussed ?? false } : null
 
