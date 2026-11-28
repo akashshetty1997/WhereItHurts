@@ -33,13 +33,15 @@ curl localhost:8000/api/health                # {"transcription":"ok","llm":"cla
 | `src/scene/BodyScene.jsx`, `src/shaders/patientMaterial.js` | three.js scene: patient model, pain looks, glows, pain-path pulse, amber flag, camera and view controls |
 | `src/panels/PrepListen.jsx` | **Record Your Prep**: say where it hurts and your goal; keywords first, Claude for free phrasing |
 | `src/panels/LiveListen.jsx`, `liveVoice.js` | **Record the Visit**: mic → WebSocket `/api/live`; voice enrollment, then every line labelled PT / Patient |
+| `src/panels/TypedLine.jsx`, `prepLine.js` | **Type a line** instead of speaking (prep or visit, PT or Patient): same path as speech; works with the server off, then tag body parts on the line |
 | `src/panels/smartPass.js` | Claude improves each visit line in the background (missed body parts, rating, movement, follow-up) |
 | `src/panels/movementLog.js`, `MovementCheck.jsx` | Movement check (PT names a movement, patient rates before / after) |
 | `src/scene/anatomy.js`, `AnatomyOverlay.jsx` | **Show Anatomy** (PT or Testing mode): reference bones, muscles and joints inside a selected region, see-through skin, Explain to Patient, Add to Report |
 | `src/scene/movements.js`, `movementSim.js`, `MovementPanel.jsx`, `src/lib/spokenMovement.js` | **Movement simulations** (everyone): **Reach Up** (right shoulder), **Turn Head** (neck), **Bend Knee** (left knee). Slider or Play, one rule each, working muscles glow orange, mark the range where it hurts; each plays by itself when the PT asks for it during the visit ("raise your arm", "turn your head to the left", "bend your knee") |
 | `src/scene/autoFollow.js`, `autoFollowState.js`, `AutoFollowControls.jsx` | **Auto-follow** during the visit: when the PT names a body part the camera goes there; when the PT names a bone, muscle or joint ("this is your collarbone", or a paraphrase the smart pass catches), Show Anatomy opens on it (PT view). Holds 4 s, pauses 10 s after anyone touches the body, back to the whole body after 15 s. Toggle in the view controls |
 | `tools/anatomy/` | Builds `public/models/anatomy.glb` from BodyParts3D (`structures.json` lists each region's structures and their `synonyms`; `node tools/anatomy/build.mjs`). `node tools/anatomy/terms.mjs` rewrites the word lists only: `src/scene/anatomyTerms.json` and `backend/app/data/anatomy_structures.json` |
-| `src/panels/VisitWrapUp.jsx` | Summary: confirm cards, PT summary |
+| `src/panels/VisitWrapUp.jsx` | Summary: confirm cards, **Review What Came Up** (PT), PT summary |
+| `src/lib/coverage.js` | Did each marked pain and the goal come up? Never came up / Asked, but the patient didn't answer / The patient talked about it / Reviewed by PT, with the sentences behind each |
 | `src/visitStore.js` | The visit state (kept in the browser across a refresh; **New Visit** clears it) |
 | `src/auth/` | Demo accounts (patient / PT), Testing mode, Try the Demo, light / dark |
 | `backend/` | FastAPI: extraction (keywords + Claude), live listening, transcription, accounts. See [backend/README.md](backend/README.md) |

@@ -1134,7 +1134,8 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
       const visitNow = visitStore.get()
       const painted = new Map(visitNow.painted.map((p) => [p.region, p]))
       const ended = modeRef.current === 'ended'
-      const missed = ended ? new Set(unmentioned(visitNow).map((p) => p.region)) : null
+      const flagged = ended ? new Map(unmentioned(visitNow).map((p) => [p.region, p.coverage])) : null
+      const missed = flagged ? new Set(flagged.keys()) : null
       const checks = visitNow.observations ?? []
       const assessed = modeRef.current !== 'paint' ? (checks[checks.length - 1]?.assessedRegion ?? null) : null
       for (const region of SHAPE_ORDER) {
@@ -1184,7 +1185,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         entry.el.classList.toggle('assessed', isAssessed)
         if (!entry.label.visible) return
         const text = isMissed
-          ? `${regionLabel(region)} · not discussed`
+          ? `${regionLabel(region)} · ${flagged.get(region) === 'pt_asked' ? 'asked, no answer' : 'not discussed'}`
           : isAssessed
             ? `Area assessed by PT · ${regionLabel(region)}`
             : `${regionLabel(region)} · ${p.type} · ${toTen(p.intensity)}/10`
