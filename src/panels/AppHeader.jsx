@@ -27,9 +27,9 @@ export default function AppHeader({ mode, onAction, onNewVisit, onPastVisits, on
   const action = ACTIONS[mode]
   const Icon = action.icon
   return (
-    <header className="flex items-center justify-between gap-6 border-b border-border px-6 py-3 whitespace-nowrap">
+    <header className="flex items-center justify-between gap-3 overflow-x-auto border-b border-border px-3 py-2 whitespace-nowrap lg:gap-6 lg:px-6 lg:py-3">
       <div className="flex items-baseline gap-3">
-        <span className="text-xl font-bold tracking-tight">WhereItHurts</span>
+        <span className="text-lg font-bold tracking-tight lg:text-xl">WhereItHurts</span>
         <span className="hidden text-sm text-muted-foreground 2xl:inline">Show where it hurts. Say what it feels like.</span>
       </div>
       {viewing ? (
@@ -47,7 +47,7 @@ export default function AppHeader({ mode, onAction, onNewVisit, onPastVisits, on
         </div>
       ) : (
         <div className="flex min-w-0 items-center gap-4">
-          <ol className="flex items-center gap-1.5" aria-label="Visit steps">
+          <ol className="flex items-center gap-1.5 max-sm:hidden" aria-label="Visit steps">
             {STEPS.map((step, i) => (
               <li key={step.mode} className="flex items-center gap-1.5">
                 {i > 0 && <span className="h-px w-5 bg-border" aria-hidden />}

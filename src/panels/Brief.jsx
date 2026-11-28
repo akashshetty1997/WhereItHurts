@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils'
 
 const FIRST = 3
 
-export default function Brief({ brief, patientKey, onClose }) {
+export default function Brief({ brief, patientKey, onClose, className }) {
   const panel = useRef(null)
   useEffect(() => {
     panel.current?.focus()
@@ -40,7 +40,7 @@ export default function Brief({ brief, patientKey, onClose }) {
       ref={panel}
       tabIndex={-1}
       aria-labelledby="brief-title"
-      className="flex min-h-0 flex-col gap-3 border-l border-border p-5 focus:outline-none"
+      className={cn('flex min-h-0 flex-col gap-3 border-l border-border p-5 focus:outline-none', className)}
     >
       <div className="flex items-start justify-between gap-3">
         <div>

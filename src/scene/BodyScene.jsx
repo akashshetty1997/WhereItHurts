@@ -1300,7 +1300,7 @@ export default function BodyScene({ onRegionClick, mode = 'paint', patient = DEF
         {anatomyOpen || mode === 'visit' ? (
           <span />
         ) : (
-          <p className="rounded-full bg-card/85 px-3 py-1.5 text-sm text-muted-foreground ring-1 ring-border backdrop-blur">
+          <p className="rounded-full bg-card/85 px-3 py-1.5 text-sm text-muted-foreground ring-1 ring-border backdrop-blur max-lg:hidden">
             Drag to turn · Shift-drag to slide up or down · Double-click a part to zoom in
           </p>
         )}

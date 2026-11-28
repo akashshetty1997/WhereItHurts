@@ -16,6 +16,8 @@ import { buildBrief } from './lib/brief'
 import Brief from './panels/Brief'
 import PastVisits from './panels/PastVisits'
 import MovementOffer from './panels/MovementOffer'
+import PhoneTabs from './panels/PhoneTabs'
+import { cn } from './lib/utils'
 
 const NEXT_MODE = { paint: 'visit', visit: 'ended', ended: 'paint' }
 const MODES = Object.keys(NEXT_MODE)
@@ -118,6 +120,12 @@ export default function App() {
     if (mode !== 'visit') autoFollowState.set({ status: null })
   }, [mode])
   const missed = shownMode === 'ended' ? unmentioned(visit) : []
+  // Phone and tablet: which panel shows (src/panels/PhoneTabs.jsx). The Brief and a finished
+  // visit open on the panel they live in.
+  const [tab, setTab] = useState('body') // body | marks | talk
+  useEffect(() => {
+    if (briefOpen) setTab('talk')
+  }, [briefOpen])
 
   function newVisit() {
     archiveVisit(visitStore.get(), ownerId) // kept in Past Visits
@@ -140,7 +148,9 @@ export default function App() {
         onClosePast={closePast}
       />
       {pastOpen && <PastVisits ownerId={ownerId} onOpen={openPast} onClose={() => setPastOpen(false)} />}
-      <div className="grid min-h-0 grid-cols-[320px_minmax(0,1fr)_360px]">
+      {/* Laptop and up: three columns. Phone and tablet: one at a time, with a tab bar at the
+          bottom (the body stays loaded underneath, so switching never reloads it). */}
+      <div className="grid min-h-0 grid-cols-1 max-lg:pb-16 lg:grid-cols-[320px_minmax(0,1fr)_360px]">
         {/* The list and the body share one selection: picking either one selects both. */}
         <IntakePanel
           visit={visit}
@@ -151,8 +161,9 @@ export default function App() {
           patient={patient}
           onPatientChange={canSwitchBody ? setPatient : null}
           canNamePatient={canSwitchBody}
+          className={cn('max-lg:border-r-0', tab !== 'marks' && 'max-lg:hidden')}
         />
-        <main className="relative min-h-0 min-w-0 overflow-hidden bg-stage text-foreground">
+        <main className={cn('relative min-h-0 min-w-0 overflow-hidden bg-stage text-foreground', tab !== 'body' && 'max-lg:hidden')}>
           <BodyScene
             key={patient}
             patient={patient}
@@ -173,11 +184,23 @@ export default function App() {
 
         </main>
         {briefOpen && brief ? (
-          <Brief brief={brief} patientKey={visit.patientKey?.trim() || null} onClose={() => setBriefOpen(false)} />
+          <Brief
+            brief={brief}
+            patientKey={visit.patientKey?.trim() || null}
+            onClose={() => setBriefOpen(false)}
+            className={cn('max-lg:border-l-0', tab !== 'talk' && 'max-lg:hidden')}
+          />
         ) : (
-          <ConversationPanel visit={visit} mode={shownMode} selected={selected} missed={missed} />
+          <ConversationPanel
+            visit={visit}
+            mode={shownMode}
+            selected={selected}
+            missed={missed}
+            className={cn('max-lg:border-l-0', tab !== 'talk' && 'max-lg:hidden')}
+          />
         )}
       </div>
+      <PhoneTabs tab={tab} onTab={setTab} mode={shownMode} briefOpen={briefOpen} />
     </div>
   )
 }

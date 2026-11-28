@@ -21,6 +21,7 @@ Hackathon app (Sundai Hack 150): before a physical therapy (PT) visit the patien
 | Patient corrections to a movement check | `src/lib/corrections.js` (states + report wording, tested), `src/panels/ConfirmCheck.jsx` |
 | Coverage (did each marked pain / the goal come up; PT review) | `src/lib/coverage.js`, `CoverageReview` in `VisitWrapUp.jsx` |
 | Next phase plan (Tasks A, 0, 1, 4, 5) | `docs/NEXT_PHASE_PLAN.md` |
+| UX audit (what was fixed, what's open) | `docs/UX_AUDIT.md`; phone / tablet tabs in `src/panels/PhoneTabs.jsx` |
 | Show Anatomy (reference bones and muscles, per-body fit) | `src/scene/anatomy.js`, `AnatomyOverlay.jsx`, `patientRegions.js` (`anatomy`); asset build `tools/anatomy/` |
 | Auto-follow (the body follows the PT) | `src/scene/autoFollow.js` (director + word matching), `autoFollowState.js`, `AutoFollowControls.jsx`; words from `tools/anatomy/terms.mjs` |
 | Region ids (keep in sync with `backend/app/constants.py`) | `src/regions.js` |
