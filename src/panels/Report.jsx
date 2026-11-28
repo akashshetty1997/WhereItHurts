@@ -9,6 +9,7 @@ import { createPortal } from 'react-dom'
 import { REGIONS, regionLabel } from '@/regions'
 import { toTen } from '@/scene/intensity'
 import { goalDiscussed } from '@/visitStore'
+import { COVERAGE_LABELS, coverage } from '@/lib/coverage'
 import { ANATOMY_PURPOSE, groupAnatomyNotes } from '@/lib/visitDisplay'
 import { describePainArc } from '@/scene/movements'
 
@@ -175,11 +176,24 @@ function PtReport({ visit, missed, maps, user }) {
 
       <Section title="Not Discussed">
         {missed.length ? (
-          <p className="report-flag">
-            Marked but never talked about: {missed.map((p) => `${REGIONS[p.region]} (${p.type}, ${toTen(p.intensity)}/10)`).join('; ')}
-          </p>
+          <ul className="report-flag">
+            {missed.map((p) => (
+              <li key={p.region}>
+                {REGIONS[p.region]} ({p.type}, {toTen(p.intensity)}/10): {COVERAGE_LABELS[p.coverage] ?? COVERAGE_LABELS.not_discussed}
+              </li>
+            ))}
+          </ul>
         ) : (
           <p>Everything marked came up.</p>
+        )}
+        {Object.entries(coverage(visit)).some(([, c]) => c.status === 'reviewed') && (
+          <p>
+            Reviewed by PT:{' '}
+            {Object.entries(coverage(visit))
+              .filter(([, c]) => c.status === 'reviewed')
+              .map(([region]) => REGIONS[region])
+              .join(', ')}
+          </p>
         )}
       </Section>
 

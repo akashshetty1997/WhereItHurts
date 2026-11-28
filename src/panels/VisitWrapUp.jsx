@@ -1,11 +1,12 @@
 // Summary: the patient confirms each movement check, then the one-screen PT summary.
-import { Check, CircleAlert, Target, X } from 'lucide-react'
+import { Check, CircleAlert, CircleCheck, MessageCircle, MessageCircleQuestion, Target, Undo2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { REGIONS, regionLabel } from '@/regions'
 import { toTen } from '@/scene/intensity'
 import { visitStore, goalDiscussed } from '@/visitStore'
 import { describePainArc } from '@/scene/movements'
-import { PAIN_STYLES, ANATOMY_PURPOSE, groupAnatomyNotes } from '@/lib/visitDisplay'
+import { PAIN_STYLES, ANATOMY_PURPOSE, SPEAKER_NAMES, SPEAKER_TEXT, groupAnatomyNotes } from '@/lib/visitDisplay'
+import { COVERAGE_LABELS, FLAGGED, coverage, evidenceLines, goalCoverage } from '@/lib/coverage'
 import { cn } from '@/lib/utils'
 
 const lower = (region) => (region ? REGIONS[region].toLowerCase() : 'symptom')
@@ -44,6 +45,9 @@ export function ConfirmChecks({ visit }) {
 
 export function PtSummary({ visit, missed }) {
   const checks = visit.observations ?? []
+  const reviewed = Object.entries(coverage(visit))
+    .filter(([, c]) => c.status === 'reviewed')
+    .map(([region]) => REGIONS[region])
   return (
     <section className="space-y-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10" aria-label="PT summary">
       <h2 className="text-xl font-bold">PT Summary</h2>
@@ -94,13 +98,18 @@ export function PtSummary({ visit, missed }) {
       </Row>
       <Row title="Not discussed">
         {missed.length ? (
-          <span className="flex items-start gap-2 text-flag">
-            <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-            {missed.map((p) => REGIONS[p.region]).join(', ')}
-          </span>
+          <ul className="space-y-0.5 text-flag">
+            {missed.map((p) => (
+              <li key={p.region} className="flex items-start gap-2">
+                <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+                {REGIONS[p.region]}: {COVERAGE_LABELS[p.coverage] ?? COVERAGE_LABELS.not_discussed}
+              </li>
+            ))}
+          </ul>
         ) : (
           'Everything marked came up'
         )}
+        {reviewed.length > 0 && <p className="mt-1">Reviewed by PT: {reviewed.join(', ')}</p>}
       </Row>
       <Row title="Follow-ups">
         {visit.followUps.length ? visit.followUps.map((f) => f.text).join('; ') : 'None'}
@@ -134,6 +143,122 @@ function Row({ title, children }) {
     <div className="grid grid-cols-[7.5rem_1fr] gap-2 border-t border-border pt-2 text-sm leading-snug">
       <span className="font-bold text-muted-foreground">{title}</span>
       <div>{children}</div>
+    </div>
+  )
+}
+
+// Summary step, PT side: did each marked pain and the goal really come up? One row each, with the
+// suggested status, the sentences behind it, and the PT's call (src/lib/coverage.js).
+const STATUS_STYLE = {
+  not_discussed: { Icon: CircleAlert, text: 'text-flag' },
+  pt_asked: { Icon: MessageCircleQuestion, text: 'text-flag' },
+  patient_responded: { Icon: MessageCircle, text: 'text-clear' },
+  reviewed: { Icon: CircleCheck, text: 'text-clear' },
+  discussed: { Icon: CircleCheck, text: 'text-clear' },
+}
+const GOAL_LABELS = { discussed: 'Came up in the visit', not_discussed: 'Didn’t come up' }
+
+export function CoverageReview({ visit }) {
+  const all = coverage(visit)
+  const goal = goalCoverage(visit)
+  if (!visit.painted.length && !goal) return null
+  return (
+    <section className="space-y-2" aria-label="Review what came up">
+      <h2 className="text-xl font-bold">Review What Came Up</h2>
+      <p className="text-sm text-muted-foreground">Suggested from the conversation. Your call is what goes in the reports.</p>
+      {goal && (
+        <ReviewRow
+          title="Goal"
+          status={goal.status}
+          label={GOAL_LABELS[goal.status]}
+          suggested={goal.review ? GOAL_LABELS[goal.suggested] : null}
+          quotes={evidenceLines(visit, goal.evidence)}
+          actions={
+            goal.review ? (
+              <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => visitStore.setGoalReview(null)}>
+                <Undo2 className="size-4" aria-hidden /> Use Suggestion
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="gap-1.5 font-bold"
+                onClick={() => visitStore.setGoalReview({ status: goal.status === 'discussed' ? 'not_discussed' : 'discussed' })}
+              >
+                {goal.status === 'discussed' ? 'Mark Not Discussed' : 'Mark Discussed'}
+              </Button>
+            )
+          }
+        />
+      )}
+      {visit.painted.map((p) => {
+        const c = all[p.region]
+        return (
+          <ReviewRow
+            key={p.region}
+            title={regionLabel(p.region)}
+            detail={`${p.type}, ${toTen(p.intensity)}/10`}
+            status={c.status}
+            label={COVERAGE_LABELS[c.status]}
+            suggested={c.review ? COVERAGE_LABELS[c.suggested] : null}
+            quotes={evidenceLines(visit, c.evidence)}
+            actions={
+              <>
+                {c.status !== 'reviewed' && (
+                  <Button size="sm" className="gap-1.5 font-bold" onClick={() => visitStore.setCoverageReview(p.region, { status: 'reviewed' })}>
+                    <Check className="size-4" aria-hidden /> Mark Reviewed
+                  </Button>
+                )}
+                {c.status === 'patient_responded' && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="font-bold"
+                    onClick={() => visitStore.setCoverageReview(p.region, { status: 'not_discussed' })}
+                  >
+                    Mark Not Discussed
+                  </Button>
+                )}
+                {c.review && (
+                  <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => visitStore.setCoverageReview(p.region, null)}>
+                    <Undo2 className="size-4" aria-hidden /> Use Suggestion
+                  </Button>
+                )}
+              </>
+            }
+          />
+        )
+      })}
+    </section>
+  )
+}
+
+function ReviewRow({ title, detail, status, label, suggested, quotes, actions }) {
+  const { Icon, text } = STATUS_STYLE[status] ?? STATUS_STYLE.not_discussed
+  return (
+    <div className={cn('space-y-2 rounded-xl p-4 ring-1', FLAGGED.has(status) ? 'bg-flag/10 ring-flag/60' : 'bg-secondary/60 ring-transparent')}>
+      <div className="flex items-start gap-3">
+        <Icon className={cn('mt-0.5 size-5 shrink-0', text)} aria-hidden />
+        <div className="min-w-0 flex-1">
+          <p className="font-bold leading-tight">
+            {title}
+            {detail && <span className="font-normal text-muted-foreground"> · {detail}</span>}
+          </p>
+          <p className={cn('text-sm font-bold', text)}>{label}</p>
+          {suggested && <p className="text-xs text-muted-foreground">Suggested: {suggested}</p>}
+        </div>
+      </div>
+      {quotes.length > 0 && (
+        <ul className="space-y-1 border-l-2 border-border pl-3">
+          {quotes.slice(0, 3).map((s) => (
+            <li key={s.id} className="text-sm leading-snug">
+              <span className={cn('font-bold', SPEAKER_TEXT[s.speaker])}>{SPEAKER_NAMES[s.speaker] ?? s.speaker}: </span>“
+              {s.correctedText ?? s.text}”
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex flex-wrap gap-1.5">{actions}</div>
     </div>
   )
 }

@@ -14,6 +14,8 @@ Hackathon app (Sundai Hack 150): before a physical therapy (PT) visit the patien
 | Visit state (saved in the browser; New Visit clears it) | `src/visitStore.js` (shape: `src/mockVisit.js`) |
 | Voice: Record Your Prep, Record the Visit, smart pass | `src/panels/PrepListen.jsx`, `LiveListen.jsx`, `liveVoice.js`, `smartPass.js`; backend `/api/live`, `/api/extract(/smart)` |
 | Movement check, summary | `src/panels/movementLog.js`, `MovementCheck.jsx`, `VisitWrapUp.jsx` |
+| Coverage (did each marked pain / the goal come up; PT review) | `src/lib/coverage.js`, `CoverageReview` in `VisitWrapUp.jsx` |
+| Next phase plan (Tasks A, 0, 1, 4, 5) | `docs/NEXT_PHASE_PLAN.md` |
 | Show Anatomy (reference bones and muscles, per-body fit) | `src/scene/anatomy.js`, `AnatomyOverlay.jsx`, `patientRegions.js` (`anatomy`); asset build `tools/anatomy/` |
 | Region ids (keep in sync with `backend/app/constants.py`) | `src/regions.js` |
 | Backend (FastAPI): extract and transcribe APIs | `backend/`; load the `whereithurts-backend` skill first |
